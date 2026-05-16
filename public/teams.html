@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Squadre</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
+
+    <link rel="stylesheet" href="./custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<header class="navbar">
+    <div class="logo">
+        <img src="/assets/img/wildcard_logo.png" alt="Torneo Wildcard" class="logo-img">
+        <span>WILDCARD</span>
+    </div>
+
+    <nav>
+        <a href="index.html"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
+        <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
+        <a class="active" href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
+        <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+    </nav>
+</header>
+
+<div class="container">
+
+    <div class="page-header-with-action">
+        <h1>👥 Squadre</h1>
+
+        <button id="toggle-create-team-btn" class="team-edit-toggle hidden" onclick="toggleCreateTeam()">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+    </div>
+
+    <div id="create-team-box" class="admin-box hidden">
+        <h3><i class="fa-solid fa-plus"></i> Aggiungi squadra</h3>
+
+        <div class="admin-grid">
+            <div class="admin-field">
+                <label>Nome squadra</label>
+                <input id="new-team-name" placeholder="Nome squadra">
+                <button onclick="createTeam()">Crea squadra</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="teams-container">
+        <p>Caricamento squadre...</p>
+    </div>
+
+</div>
+
+<script>
+    let logged = false;
+    let createTeamMode = false;
+    let liveMatches = [];
+    let teamsTimerInterval = null;
+
+    async function checkAuth() {
+        try {
+            const res = await fetch('/me');
+            const data = await res.json();
+            logged = data.logged;
+
+            const btn = document.getElementById('toggle-create-team-btn');
+            if (logged) {
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+
+        } catch {
+            logged = false;
+        }
+    }
+
+    async function loadTeams() {
+        try {
+            const teamsRes = await fetch('/teams/players');
+            const teams = await teamsRes.json();
+
+            const matchesRes = await fetch('/matches?status=live');
+            liveMatches = await matchesRes.json();
+
+            const container = document.getElementById('teams-container');
+            container.innerHTML = '';
+
+            if (!teams.length) {
+                container.innerHTML = '<p>Nessuna squadra disponibile.</p>';
+                return;
+            }
+
+            teams.forEach(team => {
+                const grouped = groupByRole(team.players || []);
+                const liveMatch = getLiveMatchForTeam(team.id);
+
+                container.innerHTML += `
+                    <div class="team-card">
+                        <div class="team-header clickable" onclick="goToTeam(${team.id})">
+                            <img class="team-logo"
+                                 src="${getTeamLogo(team.name)}"
+                                 alt="${formatTeamName(team.name)}"
+                                 onerror="this.onerror=null; this.style.display='none';">
+                            <h2>${formatTeamName(team.name)}</h2>
+                        </div>
+
+                        ${
+                            liveMatch
+                            ? renderLiveMatchBadge(liveMatch, team.id)
+                            : ''
+                        }
+
+                        ${renderRole('PRE', grouped.PRE)}
+                        ${renderRole('POR', grouped.POR)}
+                        ${renderRole('DIF', grouped.DIF)}
+                        ${renderRole('CEN', grouped.CEN)}
+                        ${renderRole('ATT', grouped.ATT)}
+                    </div>
+                `;
+            });
+
+            startTeamsTimers();
+
+        } catch (err) {
+            console.error('Errore caricamento squadre:', err);
+
+            document.getElementById('teams-container').innerHTML =
+                '<p style="color:red;">Errore nel caricamento dati</p>';
+        }
+    }
+
+    function getLiveMatchForTeam(teamId) {
+        return liveMatches.find(match =>
+            String(match.home_team_id) === String(teamId) ||
+            String(match.away_team_id) === String(teamId)
+        );
+    }
+
+    function renderLiveMatchBadge(match, teamId) {
+        const isHome = String(match.home_team_id) === String(teamId);
+        const opponentName = isHome ? match.away_team_name : match.home_team_name;
+
+        return `
+            <div class="team-live-match clickable" onclick="goToMatch(${match.id})">
+                <div class="team-live-title">
+                    <span>🔴 LIVE</span>
+                    <span class="team-live-timer" data-started-at="${match.started_at}">00:00</span>
+                </div>
+
+                <div class="team-live-info">
+                    <span>vs ${formatTeamName(opponentName)}</span>
+                    <strong>${match.home_score || 0} - ${match.away_score || 0}</strong>
+                </div>
+            </div>
+        `;
+    }
+
+    function startTeamsTimers() {
+        if (teamsTimerInterval) clearInterval(teamsTimerInterval);
+
+        updateTeamsTimers();
+
+        teamsTimerInterval = setInterval(updateTeamsTimers, 1000);
+    }
+
+    function updateTeamsTimers() {
+        document.querySelectorAll('.team-live-timer').forEach(el => {
+            const startedAt = el.dataset.startedAt;
+            el.textContent = getTimerText(startedAt);
+        });
+    }
+
+    function parseStartedAt(value) {
+        if (!value) return null;
+        return new Date(value);
+    }
+
+    function getTimerText(startedAtValue) {
+        const startedAt = parseStartedAt(startedAtValue);
+        if (!startedAt) return '00:00';
+
+        const now = new Date();
+        const diff = Math.max(0, Math.floor((now - startedAt) / 1000));
+
+        const minutes = String(Math.floor(diff / 60)).padStart(2, '0');
+        const seconds = String(diff % 60).padStart(2, '0');
+
+        return `${minutes}:${seconds}`;
+    }
+
+    function toggleCreateTeam() {
+        createTeamMode = !createTeamMode;
+
+        const box = document.getElementById('create-team-box');
+        const icon = document.querySelector('#toggle-create-team-btn i');
+
+        if (createTeamMode) {
+            box.classList.remove('hidden');
+            icon.className = 'fa-solid fa-xmark';
+        } else {
+            box.classList.add('hidden');
+            icon.className = 'fa-solid fa-plus';
+        }
+    }
+
+    async function createTeam() {
+        const name = document.getElementById('new-team-name').value.trim();
+
+        if (!name) {
+            alert('Inserisci il nome della squadra');
+            return;
+        }
+
+        const res = await fetch('/teams', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+
+        if (!res.ok) {
+            alert('Errore creazione squadra');
+            return;
+        }
+
+        document.getElementById('new-team-name').value = '';
+        createTeamMode = false;
+        document.getElementById('create-team-box').classList.add('hidden');
+        document.querySelector('#toggle-create-team-btn i').className = 'fa-solid fa-plus';
+
+        await loadTeams();
+    }
+
+    function formatTeamName(name) {
+        if (!name) return '';
+
+        return name
+            .split(' ')
+            .map(word =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            )
+            .join(' ');
+    }
+
+    function formatPlayerName(player) {
+        const firstName = player.first_name || '';
+        const lastName = player.last_name || '';
+        return `${firstName} ${lastName}`.trim();
+    }
+
+    function groupByRole(players) {
+        const roles = { PRE: [], POR: [], DIF: [], CEN: [], ATT: [], PRE: [] };
+
+        players.forEach(p => {
+            if (roles[p.role]) {
+                roles[p.role].push(p);
+            }
+        });
+
+        return roles;
+    }
+
+    function renderRole(role, players = []) {
+        if (!players.length) return '';
+
+        const labels = {
+            PRE: 'Presidente 👑',
+            POR: 'Portieri 🧤',
+            DIF: 'Difensori 🛡️',
+            CEN: 'Centrocampisti 🧠',
+            ATT: 'Attaccanti 🎯'
+        };
+
+        return `
+            <h3>${labels[role]}</h3>
+
+            ${players.map(p => `
+                <div class="player">
+                    
+                    <span class="player-link" onclick="goToPlayer(${p.id})">
+                        ${
+                            p.role !== 'PRE'
+                            ? `
+                            <span class="shirt-badge">
+                                <i class="fa-solid fa-shirt"></i>
+                                <span class="shirt-number">${p.shirt_number}</span>
+                            </span>
+                            `
+                            : ''
+                        }
+                        ${formatPlayerName(p)}
+                    </span>
+
+                    ${
+                        logged
+                        ? `
+                        <div class="player-rating stars">
+                            ${renderStars(p.rating)}
+                            <span class="rating-number">(${Number(p.rating || 0)})</span>
+                        </div>
+                        `
+                        : ''
+                    }
+                </div>
+            `).join('')}
+        `;
+    }
+
+    function renderStars(rating) {
+        const value = Number(rating || 0);
+
+        if (value <= 0) {
+            return `<span class="rating-empty">Nessuna stella</span>`;
+        }
+
+        return Array.from({ length: value })
+            .map(() => `<i class="fa-solid fa-star"></i>`)
+            .join('');
+    }
+
+    function getTeamLogo(teamName) {
+        if (!teamName || !String(teamName).trim()) return '';
+
+        const fileName = String(teamName)
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, '_');
+
+        return `/assets/img/teams/${fileName}_logo.png`;
+    }
+
+    function goToPlayer(id) {
+        window.location.href = `player.html?id=${id}`;
+    }
+
+    function goToTeam(id) {
+        window.location.href = `team.html?id=${id}`;
+    }
+
+    function goToMatch(id) {
+        window.location.href = `match.html?id=${id}`;
+    }
+
+    (async () => {
+        await checkAuth();
+        await loadTeams();
+    })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Classifica</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
+
+    <link rel="stylesheet" href="./custom.css">
+
+    <!-- Font Awesome (versione 6+) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <div class="logo">
+            <img src="/assets/img/wildcard_logo.png" alt="Torneo Wildcard" class="logo-img">
+            <span>WILDCARD</span>
+        </div>
+
+        <nav>
+            <a href="index.html"><i class="fa-solid fa-house"></i> Home</a>
+            <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
+            <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
+            <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
+            <a class="active" href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+        </nav>
+    </header>
+
+    <div class="container">
+
+        <h1>🍺 Coppa Chiosco</h1>
+
+        <div class="chiosco-countdown-card">
+            <div class="chiosco-countdown-title">Tempo rimanente</div>
+            <div id="countdown" class="chiosco-countdown">Caricamento...</div>
+            <div class="chiosco-deadline">Scadenza: 30/04/2026 - 22:00</div>
+        </div>
+
+        <div id="chiosco-container">
+            <p>Caricamento classifica chiosco...</p>
+        </div>
+
+    </div>
+
+    <script>
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/me');
+                const data = await res.json();
+
+                logged = data.logged;
+            } catch (err) {
+                console.error('Errore verifica login', err);
+                logged = false;
+            }
+        }
+
+        const deadline = new Date('2026-04-30T22:00:00');
+
+        let originalBeers = {};
+        let pendingBeers = {};
+        let teamsCache = [];
+        let countdownInterval = null;
+
+        async function loadChiosco() {
+            try {
+                const res = await fetch('/chiosco-beers/standings');
+                const teams = await res.json();
+
+                teamsCache = teams;
+
+                teams.forEach(team => {
+                originalBeers[team.id] = Number(team.beers || 0);
+                pendingBeers[team.id] = Number(team.beers || 0);
+                });
+
+                renderChiosco();
+                startCountdown();
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('chiosco-container').innerHTML =
+                '<p style="color:red;">Errore nel caricamento Coppa Chiosco</p>';
+            }
+        }
+
+        function renderChiosco() {
+            const sortedTeams = [...teamsCache].sort((a, b) => {
+                return Number(pendingBeers[b.id] || 0) - Number(pendingBeers[a.id] || 0);
+            });
+
+            const hasChanges = Object.keys(pendingBeers).some(id =>
+                pendingBeers[id] !== originalBeers[id]
+            );
+
+            const container = document.getElementById('chiosco-container');
+
+            container.innerHTML = `
+                <div class="chiosco-list">
+                    ${sortedTeams.map((team, index) => {
+                    const changed = pendingBeers[team.id] !== originalBeers[team.id];
+
+                    return `
+                        <div class="chiosco-row ${index === 0 ? 'leader' : ''}">
+
+                            <div class="chiosco-position">${index + 1}</div>
+
+                            <div class="chiosco-team clickable" onclick="goToTeam(${team.id})">
+                                <img src="${getTeamLogo(team.name)}" alt="${team.name}">
+                                <span>${formatTeamName(team.name)}</span>
+                            </div>
+
+                            ${
+                                logged
+                                ? `<div class="chiosco-controls">
+                                    <button class="chiosco-btn" onclick="event.stopPropagation(); updatePendingBeer(${team.id}, -1)">−</button>
+
+                                    <div class="chiosco-count ${changed ? 'changed' : ''}">
+                                        🍺 ${pendingBeers[team.id] || 0}
+                                    </div>
+
+                                    <button class="chiosco-btn" onclick="event.stopPropagation(); updatePendingBeer(${team.id}, 1)">+</button>
+                                </div>`
+                                : `<div class="chiosco-count ${changed ? 'changed' : ''}">
+                                    🍺 ${pendingBeers[team.id] || 0}
+                                </div>`
+                            }
+
+                        </div>
+                    `;
+                    }).join('')}
+                </div>
+
+                ${
+                    hasChanges
+                    ? `<div class="chiosco-confirm-box">
+                        <button class="confirm-btn" onclick="confirmChanges()">Conferma</button>
+                        <button class="cancel-btn" onclick="cancelChanges()">Annulla</button>
+                        </div>`
+                    : ''
+                }
+                `;
+        }
+
+        function updatePendingBeer(teamId, amount) {
+            pendingBeers[teamId] = Math.max(0, Number(pendingBeers[teamId] || 0) + amount);
+            renderChiosco();
+        }
+
+        async function confirmChanges() {
+            try {
+                const requests = [];
+
+                Object.keys(pendingBeers).forEach(teamId => {
+                const diff = pendingBeers[teamId] - originalBeers[teamId];
+
+                if (diff !== 0) {
+                    requests.push(
+                    fetch('/chiosco-beers', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                        team_id: teamId,
+                        quantity: diff
+                        })
+                    })
+                    );
+                }
+                });
+
+                await Promise.all(requests);
+                await loadChiosco();
+
+            } catch (err) {
+                console.error(err);
+                alert('Errore salvataggio modifiche');
+            }
+        }
+
+        function cancelChanges() {
+            pendingBeers = { ...originalBeers };
+            renderChiosco();
+        }
+
+        function startCountdown() {
+            updateCountdown();
+
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = setInterval(updateCountdown, 1000);
+        }
+
+        function updateCountdown() {
+            const now = new Date();
+            const diff = deadline - now;
+            const el = document.getElementById('countdown');
+
+            if (diff <= 0) {
+                el.innerHTML = '🏁 Tempo scaduto';
+                return;
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((diff / (1000 * 60)) % 60);
+            const seconds = Math.floor((diff / 1000) % 60);
+
+            el.innerHTML = `${days}g ${hours}h ${minutes}m ${seconds}s`;
+        }
+
+        function goToTeam(id) {
+            window.location.href = `team.html?id=${id}`;
+        }
+
+        function getTeamLogo(name) {
+            return `/assets/img/teams/${name.toLowerCase().replace(/\s+/g, '_')}_logo.png`;
+        }
+
+        function formatTeamName(name) {
+            if (!name) return '';
+            return name
+                .split(' ')
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                .join(' ');
+        }
+
+        (async () => {
+            await checkAuth();
+            await loadChiosco();
+        })();
+        
+    </script>
+
+</body>
+</html>

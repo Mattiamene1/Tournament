@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
+
+    <link rel="stylesheet" href="./custom.css">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <div class="logo">
+            <img src="/assets/img/wildcard_logo.png" alt="Torneo Wildcard" class="logo-img">
+            <span>WILDCARD</span>
+        </div>
+
+        <nav>
+            <a href="index.html"><i class="fa-solid fa-house"></i> Home</a>
+            <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
+            <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
+            <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
+            <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h1>👤 Login</h1>
+
+        <div id="login-container">
+
+            <form id="login-form" class="card">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required />
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required />
+                </div>
+
+                <button type="submit" class="btn">
+                    <i class="fa-solid fa-right-to-bracket"></i> Accedi
+                </button>
+
+                <p id="error-msg" class="error"></p>
+            </form>
+
+            <div id="logged-area" style="display:none;">
+                <p>✅ Sei loggato</p>
+                <button id="logout-btn" class="btn danger">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+<script>
+
+    async function checkLogin() {
+        const res = await fetch('/me');
+        const data = await res.json();
+
+        if (data.logged) {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('logged-area').style.display = 'block';
+        } else {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('logged-area').style.display = 'none';
+        }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        const res = await fetch('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+            document.getElementById('error-msg').textContent = 'Credenziali non valide';
+            return;
+        }
+
+        // login ok → redirect alla home
+        window.location.href = '/index.html';
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+        await fetch('/logout', { method: 'POST' });
+        checkLogin();
+    });
+
+    // init
+    checkLogin();
+</script>
+
+</body>
+</html>

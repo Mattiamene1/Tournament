@@ -1,0 +1,24 @@
+Traccia di tempo di sviluppo
+
+23 aprile 2026 - 4 ore
+- Con IA design delle tabelle del DB
+- Creazione DB mysql
+- Popolato tabelle giocatori, squadre
+- Generato Loghi e Favicon
+
+24 aprile - 4 ore
+- pagine html contatti, home, squadre, giocatore
+
+25 aprile - 4 ore
+- pagine html classifiche, stats
+
+27 aprile - 3 ore
+- Aggiunto coppa chiosco
+- fix css
+
+28 aprile - 4 ore
+- Aggiunto auth
+- aggiunto interazione rosa, foto, conteggio birre
+
+29 aprile - 4 ore
+- Interazione partite

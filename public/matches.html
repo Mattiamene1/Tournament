@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Partite</title>
+
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/img/favicon/favicon-16x16.png">
+  <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
+
+  <link rel="stylesheet" href="./custom.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<header class="navbar">
+  <div class="logo">
+    <img src="/assets/img/wildcard_logo.png" class="logo-img">
+    <span>WILDCARD</span>
+  </div>
+
+  <nav>
+    <a href="index.html"><i class="fa-solid fa-house"></i> Home</a>
+    <a class="active" href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
+    <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
+    <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
+    <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+  </nav>
+</header>
+
+<div class="container">
+  <h1>📅 Calendario Partite</h1>
+
+  <div id="matches-container">
+    <p>Caricamento...</p>
+  </div>
+</div>
+
+<script>
+let matchesTimerInterval = null;
+
+async function loadMatches() {
+  try {
+    const res = await fetch('/matches');
+    const matches = await res.json();
+
+    const container = document.getElementById('matches-container');
+    container.innerHTML = '';
+
+    matches.forEach(matchData => {
+      startMatchesTimers();
+      console.log(matchData)
+      container.innerHTML += `
+        <div class="match-card clickable" onclick="goToMatch(${matchData.id})">
+
+          <div class="match-header">
+            <span>${formatDate(matchData.match_date)}</span>
+
+            <span class="match-group">${matchData.group_name}</span>
+          </div>
+
+          <div class="match-teams">
+
+            <div class="team">
+              <img src="${getTeamLogo(matchData.home_team_name)}">
+              <span>${formatTeamName(matchData.home_team_name)}</span>
+            </div>
+
+            <div class="vs">
+              ${renderScore(matchData)}
+            </div>
+
+            <div class="team">
+              <span>${formatTeamName(matchData.away_team_name)}</span>
+              <img src="${getTeamLogo(matchData.away_team_name)}">
+            </div>
+
+          </div>
+
+          <div class="match-status ${matchData.status}">
+            ${renderStatus(matchData.status)}
+            ${matchData.status === 'live'
+              ? `<span class="live-timer-inline">⏱ <span class="match-list-timer" data-started-at="${matchData.started_at}">00:00</span></span>`
+              : ''
+            }
+          </div>
+
+        </div>
+      `;
+    });
+
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function goToMatch(id) {
+  window.location.href = `match.html?id=${id}`;
+}
+
+function formatDate(date) {
+  const d = new Date(date);
+  return d.toLocaleDateString('it-IT') + ' - ' +
+         d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatTeamName(name) {
+  if (!name) return '';
+  return name
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getTeamLogo(name) {
+  return `/assets/img/teams/${name.toLowerCase().replace(/\s+/g,'_')}_logo.png`;
+}
+
+function renderScore(match) {
+  if (match.status === 'finished' || match.status === 'live') {
+    return `${match.home_score} - ${match.away_score}`;
+  }
+
+  return 'VS';
+}
+
+function renderStatus(status) {
+  switch (status) {
+    case 'scheduled':
+      return '🕒 In programma';
+    case 'live':
+      return '🔴 LIVE';
+    case 'finished':
+      return '✅ Terminata';
+    default:
+      return status;
+  }
+}
+
+function startMatchesTimers() {
+  if (matchesTimerInterval) clearInterval(matchesTimerInterval);
+
+  updateMatchesTimers();
+  matchesTimerInterval = setInterval(updateMatchesTimers, 1000);
+}
+
+function updateMatchesTimers() {
+  document.querySelectorAll('.match-list-timer').forEach(el => {
+    el.textContent = getTimerText(el.dataset.startedAt);
+  });
+}
+
+function getTimerText(startedAtValue) {
+  if (!startedAtValue) return '00:00';
+
+  const startedAt = new Date(startedAtValue);
+  const now = new Date();
+  const diff = Math.max(0, Math.floor((now - startedAt) / 1000));
+
+  const minutes = String(Math.floor(diff / 60)).padStart(2, '0');
+  const seconds = String(diff % 60).padStart(2, '0');
+
+  return `${minutes}:${seconds}`;
+}
+
+loadMatches();
+</script>
+
+</body>
+</html>

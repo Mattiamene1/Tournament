@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giocatore</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
+
+    <link rel="stylesheet" href="./custom.css">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- <a href="teams.html" class="back">← Torna alle squadre</a> -->
+
+  <div id="player-container">
+    <p>Caricamento player...</p>
+  </div>
+
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const playerId = params.get('id');
+
+async function loadPlayer() {
+  try {
+    const res = await fetch(`/players/${playerId}`);
+    const p = await res.json();
+
+    const teamRes = await fetch(`/teams/${p.team_id}`);
+    const team = await teamRes.json();
+
+    const eventsRes = await fetch('/match-events');
+    const events = await eventsRes.json();
+
+    const goals = events.filter(e =>
+      String(e.player_id) === String(playerId) &&
+      (e.event_type === 'goal' || e.event_type === 'bonus')
+    ).length;
+
+    const assists = events.filter(e =>
+      String(e.assist_player_id) === String(playerId)
+    ).length;
+
+    let logged = false;
+
+    const container = document.getElementById('player-container');
+
+    container.innerHTML = `
+      <div class="player-layout">
+
+        <div class="player-card">
+
+          <h1>${p.first_name} ${p.last_name}</h1>
+
+          <div class="player-meta">
+            <div class="team-box">
+              <img src="/assets/img/teams/${team.name.toLowerCase().replace(/\s+/g,'_')}_logo.png"
+                  alt="${team.name}">
+              <span>${team.name}</span>
+            </div>
+
+            <div class="player-info">
+              <p><strong>Ruolo:</strong> ${p.role}</p>
+
+              ${
+                p.role !== 'PRE'
+                  ? `
+                  <p>
+                    <strong>Numero:</strong>
+                    <span class="shirt-badge">
+                      <i class="fa-solid fa-shirt"></i>
+                      <span class="shirt-number">${p.shirt_number}</span>
+                    </span>
+                  </p>
+                  `
+                  : ''
+              }
+            </div>
+          </div>
+
+          <div class="player-stats">
+            <div class="stat-box">
+              <span class="stat-number">${goals}</span>
+              <span class="stat-label">Gol</span>
+            </div>
+
+            <div class="stat-box">
+              <span class="stat-number">${assists}</span>
+              <span class="stat-label">Assist</span>
+            </div>
+          </div>
+
+          ${
+            logged
+              ? `<div class="player-rating">
+                   ${renderStars(p.rating)}
+                 </div>`
+              : ''
+          }
+
+        </div>
+
+        <div class="player-image">
+          <img src="/assets/img/players/${p.id}.png"
+               alt="${p.first_name} ${p.last_name}">
+        </div>
+
+      </div>
+    `;
+
+  } catch (err) {
+    console.error(err);
+
+    document.getElementById('player-container').innerHTML =
+      `<p style="color:red;">Errore nel caricamento player</p>`;
+  }
+}
+
+function renderStars(rating) {
+  rating = parseInt(rating);
+
+  return Array.from({ length: rating })
+    .map(() => `<i class="fa-solid fa-star"></i>`)
+    .join('');
+}
+
+loadPlayer();
+</script>
+
+</body>
+</html>

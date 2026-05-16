@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Partita</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/img/favicon/favicon-16x16.png">
+  <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
+
+  <link rel="stylesheet" href="./custom.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<header class="navbar">
+  <div class="logo">
+    <img src="/assets/img/wildcard_logo.png" class="logo-img">
+    <span>WILDCARD</span>
+  </div>
+
+  <nav>
+    <a href="index.html"><i class="fa-solid fa-house"></i> Home</a>
+    <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
+    <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
+    <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
+    <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+  </nav>
+</header>
+
+<div class="container">
+  <h1>📅 Partita</h1>
+
+  <div id="match-page">
+    <p>Caricamento partita...</p>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const matchId = params.get('id');
+
+let logged = false;
+let matchData = null;
+let homePlayers = [];
+let awayPlayers = [];
+let bonuses = [];
+let timerInterval = null;
+
+let scheduleEditMode = false;
+let eventCreateMode = false;
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/me');
+    const data = await res.json();
+    logged = data.logged;
+  } catch {
+    logged = false;
+  }
+}
+
+async function loadMatchPage() {
+  try {
+    const matchRes = await fetch(`/matches/${matchId}`);
+    matchData = await matchRes.json();
+    
+    const homePlayersRes = await fetch(`/players?team_id=${matchData.home_team_id}`);
+    homePlayers = await homePlayersRes.json();
+
+    const awayPlayersRes = await fetch(`/players?team_id=${matchData.away_team_id}`);
+    awayPlayers = await awayPlayersRes.json();
+
+    const eventsRes = await fetch(`/match-events?match_id=${matchId}`);
+    const events = await eventsRes.json();
+
+    const bonusesRes = await fetch('/bonuses');
+    bonuses = await bonusesRes.json();
+
+    renderMatch(events);
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('match-page').innerHTML =
+      '<p style="color:red;">Errore nel caricamento partita</p>';
+  }
+}
+
+function renderMatch(events) {
+  document.getElementById('match-page').innerHTML = `
+    <div class="match-card match-detail-card">
+
+      <div class="match-header match-detail-header">
+
+        <div class="match-header-left">
+          <span class="match-date">${formatDate(matchData.match_date)}</span>
+
+          ${
+            logged
+            ? `
+            <button class="match-datetime-edit-toggle" onclick="toggleScheduleEdit()" title="Modifica programmazione">
+              <i class="fa-solid ${scheduleEditMode ? 'fa-xmark' : 'fa-pen'}"></i>
+            </button>
+            `
+            : ''
+          }
+        </div>
+
+        <div class="match-header-center">
+          ${
+            logged && matchData.status === 'scheduled'
+            ? `
+            <button class="match-state-btn" onclick="startMatch()">
+              <i class="fa-solid fa-play"></i> Inizia partita
+            </button>
+            `
+            : ''
+          }
+
+          ${
+            logged && matchData.status === 'live'
+            ? `
+            <button class="match-state-btn danger" onclick="finishMatch()">
+              <i class="fa-solid fa-flag-checkered"></i> Termina partita
+            </button>
+            `
+            : ''
+          }
+        </div>
+
+        <span class="match-group">${matchData.group_name || ''}</span>
+
+      </div>
+
+      ${
+        logged && scheduleEditMode
+        ? `
+        <div class="schedule-edit-box">
+          <input class="match-datetime-input" id="match-date" type="datetime-local" value="${toDateTimeLocal(matchData.match_date)}">
+          <button class="match-datetime-button" onclick="updateMatchDate()">Salva programmazione</button>
+        </div>
+        `
+        : ''
+      }
+
+      <div class="match-teams">
+
+        <div class="team">
+          ${
+            matchData.home_team_name
+            ? `<img src="${getTeamLogo(matchData.home_team_name)}" onerror="this.onerror=null; this.style.display='none';">`
+            : ''
+          }
+          <span>${formatTeamName(matchData.home_team_name)}</span>
+        </div>
+
+        <div class="vs">
+          ${renderScore(matchData)}
+        </div>
+
+        <div class="team">
+          <span>${formatTeamName(matchData.away_team_name)}</span>
+          ${
+            matchData.away_team_name
+            ? `<img src="${getTeamLogo(matchData.away_team_name)}" onerror="this.onerror=null; this.style.display='none';">`
+            : ''
+          }
+        </div>
+
+      </div>
+
+      <div class="match-status ${matchData.status}">
+        <span>${renderStatus(matchData.status)}</span>
+
+        ${
+          matchData.status === 'live'
+          ? `<span class="live-timer-inline">⏱ <span id="match-timer">${getTimerText()}</span></span>`
+          : ''
+        }
+      </div>
+
+    </div>
+
+    ${
+      logged && matchData.status === 'live'
+      ? `
+      <div class="match-event-action">
+        <button onclick="toggleEventCreate()">
+          <i class="fa-solid ${eventCreateMode ? 'fa-xmark' : 'fa-plus'}"></i>
+          ${eventCreateMode ? 'Chiudi evento' : 'Aggiungi evento'}
+        </button>
+      </div>
+      `
+      : ''
+    }
+
+    ${
+      logged && matchData.status === 'live' && eventCreateMode
+      ? renderAddEventBox()
+      : ''
+    }
+
+    <div id="events-list">
+      ${renderEvents(events)}
+    </div>
+  `;
+
+  if (matchData.status === 'live') {
+    startTimer();
+  }
+}
+
+function renderAddEventBox() {
+  return `
+    <div class="admin-box">
+      <h3><i class="fa-solid fa-plus"></i> Nuovo evento</h3>
+
+      <div class="admin-grid">
+
+        <div class="admin-field">
+          <label>Tipo evento</label>
+          <select id="event-type" onchange="handleEventTypeChange()">
+            <option value="goal">Gol</option>
+            <option value="yellow_card">Cartellino Giallo</option>
+            <option value="red_card">Cartellino Rosso</option>
+            <option value="bonus">Bonus</option>
+          </select>
+        </div>
+
+        <div class="admin-field">
+          <label>Squadra</label>
+          <select id="event-team" onchange="renderPlayerSelects()">
+            <option value="${matchData.home_team_id}">${formatTeamName(matchData.home_team_name)}</option>
+            <option value="${matchData.away_team_id}">${formatTeamName(matchData.away_team_name)}</option>
+          </select>
+        </div>
+
+        <div class="admin-field">
+          <label>Giocatore</label>
+          <select id="event-player"></select>
+        </div>
+
+        <div class="admin-field" id="goal-type-box">
+          <label>Tipo gol</label>
+          <select id="goal-type">
+            <option value="azione">Azione</option>
+            <option value="rigore">Rigore</option>
+            <option value="punizione">Punizione</option>
+          </select>
+        </div>
+
+        <div class="admin-field" id="assist-box">
+          <label>Assist opzionale</label>
+          <select id="assist-player">
+            <option value="">Nessun assist</option>
+          </select>
+        </div>
+
+        <div class="admin-field hidden" id="bonus-box">
+          <label>Bonus</label>
+          <select id="bonus-id">
+            ${bonuses.map(b => `
+              <option value="${b.id}">${b.name}</option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div class="admin-field minute-field">
+          <label><i class="fa-solid fa-clock"></i> Minuto</label>
+
+          <div class="minute-row">
+            <input id="event-minute" disabled value="${getCurrentMinute()}">
+            <button onclick="createMatchEvent()">Salva</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+
+function renderEvents(events) {
+  if (!events || !events.length) return '<p>Nessun evento.</p>';
+
+  return events.map(e => {
+    const isHome = String(e.team_id) === String(matchData.home_team_id);
+    const sideClass = isHome ? 'home-event' : 'away-event';
+
+    return `
+      <div class="event-row ${sideClass}">
+        <div class="event-minute">${e.minute}'</div>
+        <div class="event-icon">${eventIcon(e.event_type)}</div>
+        <div class="event-content">
+          <strong>${e.player_name || formatEventPlayerName(e)}</strong>
+          <span class="event-label">${eventLabel(e)}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatEventPlayerName(e) {
+  const first = e.first_name || e.player_first_name || '';
+  const last = e.last_name || e.player_last_name || '';
+  return `${first} ${last}`.trim();
+}
+
+function eventIcon(type) {
+  switch (type) {
+    case 'goal': return '⚽';
+    case 'yellow_card': return '🟨';
+    case 'red_card': return '🟥';
+    case 'bonus': return '⭐';
+    default: return '•';
+  }
+}
+
+function eventLabel(e) {
+  if (e.event_type === 'goal') return `Gol - ${e.goal_type || ''}`;
+  if (e.event_type === 'yellow_card') return 'Cartellino Giallo';
+  if (e.event_type === 'red_card') return 'Cartellino Rosso';
+  if (e.event_type === 'bonus') return `Bonus - ${e.bonus_name || ''}`;
+  return e.event_type;
+}
+
+function toggleScheduleEdit() {
+  scheduleEditMode = !scheduleEditMode;
+  loadMatchPage();
+}
+
+function toggleEventCreate() {
+  eventCreateMode = !eventCreateMode;
+  loadMatchPage();
+}
+
+function renderPlayerSelects() {
+  const teamId = document.getElementById('event-team')?.value;
+  if (!teamId) return;
+
+  const players = String(teamId) === String(matchData.home_team_id)
+    ? homePlayers
+    : awayPlayers;
+
+  const playerSelect = document.getElementById('event-player');
+  const assistSelect = document.getElementById('assist-player');
+
+  if (!playerSelect || !assistSelect) return;
+
+  playerSelect.innerHTML = players.map(p => `
+    <option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>
+  `).join('');
+
+  assistSelect.innerHTML = `
+    <option value="">Nessun assist</option>
+    ${players.map(p => `
+      <option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>
+    `).join('')}
+  `;
+}
+
+function handleEventTypeChange() {
+  const type = document.getElementById('event-type')?.value;
+  if (!type) return;
+
+  const goalTypeBox = document.getElementById('goal-type-box');
+  const assistBox = document.getElementById('assist-box');
+  const bonusBox = document.getElementById('bonus-box');
+
+  goalTypeBox.style.display = 'none';
+  assistBox.style.display = 'none';
+  bonusBox.style.display = 'none';
+
+  if (type === 'goal') {
+    goalTypeBox.style.display = 'flex';
+    assistBox.style.display = 'flex';
+  }
+
+  if (type === 'bonus') {
+    bonusBox.style.display = 'flex';
+  }
+}
+
+async function updateMatchDate() {
+  const match_date = document.getElementById('match-date').value;
+
+  const res = await fetch(`/matches/${matchId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      group_id: matchData.group_id,
+      home_team_id: matchData.home_team_id,
+      away_team_id: matchData.away_team_id,
+      match_date,
+      pitch_id: matchData.pitch_id,
+      referee_id: matchData.referee_id,
+      status: matchData.status
+    })
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    alert(error.error || 'Errore aggiornamento data');
+    return;
+  }
+
+  scheduleEditMode = false;
+  await loadMatchPage();
+}
+
+async function startMatch() {
+  const res = await fetch(`/matches/${matchId}/start`, {
+    method: 'POST'
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    alert(data.error || 'Errore avvio partita');
+    return;
+  }
+
+  await loadMatchPage();
+}
+
+async function finishMatch() {
+  const res = await fetch(`/matches/${matchId}/finish`, {
+    method: 'POST'
+  });
+
+  if (!res.ok) {
+    alert('Errore chiusura partita');
+    return;
+  }
+
+  eventCreateMode = false;
+  await loadMatchPage();
+}
+
+async function createMatchEvent() {
+  const event_type = document.getElementById('event-type').value;
+  const team_id = document.getElementById('event-team').value;
+  const player_id = document.getElementById('event-player').value;
+  const minute = getCurrentMinute();
+
+  const body = {
+    match_id: Number(matchId),
+    team_id: Number(team_id),
+    player_id: player_id ? Number(player_id) : null,
+    event_type,
+    minute
+  };
+
+  if (event_type === 'goal') {
+    body.goal_type = document.getElementById('goal-type').value;
+
+    const assist = document.getElementById('assist-player').value;
+    body.assist_player_id = assist ? Number(assist) : null;
+  }
+
+  if (event_type === 'yellow_card' || event_type === 'red_card') {
+    body.card_type = event_type;
+  }
+
+  if (event_type === 'bonus') {
+    body.bonus_id = Number(document.getElementById('bonus-id').value);
+    body.event_value = 1;
+  }
+
+  const res = await fetch('/match-events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    alert(error.error || 'Errore creazione evento');
+    return;
+  }
+
+  eventCreateMode = false;
+  await loadMatchPage();
+}
+
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+
+  timerInterval = setInterval(() => {
+    const el = document.getElementById('match-timer');
+    const minuteInput = document.getElementById('event-minute');
+
+    if (el) el.textContent = getTimerText();
+    if (minuteInput) minuteInput.value = getCurrentMinute();
+  }, 1000);
+
+  renderPlayerSelects();
+  handleEventTypeChange();
+}
+
+function parseStartedAt() {
+  if (!matchData.started_at) return null;
+
+  return new Date(matchData.started_at);
+}
+
+function getCurrentMinute() {
+  const startedAt = parseStartedAt();
+  if (!startedAt) return 0;
+
+  const now = new Date();
+  return Math.max(1, Math.floor((now - startedAt) / 60000) + 1);
+}
+
+function getTimerText() {
+  const startedAt = parseStartedAt();
+  if (!startedAt) return '00:00';
+
+  const now = new Date();
+  const diff = Math.max(0, Math.floor((now - startedAt) / 1000));
+
+  const minutes = String(Math.floor(diff / 60)).padStart(2, '0');
+  const seconds = String(diff % 60).padStart(2, '0');
+
+  return `${minutes}:${seconds}`;
+}
+
+function toDateTimeLocal(value) {
+  const d = new Date(value);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
+function formatDate(date) {
+  const d = new Date(date);
+  return d.toLocaleDateString('it-IT') + ' - ' +
+    d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatTeamName(name) {
+  if (!name) return '';
+
+  return name
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getTeamLogo(name) {
+  if (!name || !String(name).trim()) {
+    return '';
+  }
+
+  return `/assets/img/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
+}
+
+function renderScore(match) {
+  if (match.status === 'finished' || match.status === 'live') {
+    return `${match.home_score || 0} - ${match.away_score || 0}`;
+  }
+
+  return 'VS';
+}
+
+function renderStatus(status) {
+  switch (status) {
+    case 'scheduled': return '🕒 In programma';
+    case 'live': return '🔴 LIVE';
+    case 'finished': return '✅ Terminata';
+    default: return status;
+  }
+}
+
+(async () => {
+  await checkAuth();
+  await loadMatchPage();
+})();
+</script>
+
+</body>
+</html>
