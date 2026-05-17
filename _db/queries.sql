@@ -24,7 +24,7 @@ CREATE TABLE players (
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     role ENUM('POR','DIF','CEN','ATT','PRE') NOT NULL,
-    rating ENUM('1','2','3','4','5') NOT NULL,
+    rating ENUM('1','2','3','4','5'),
     shirt_number INT NOT NULL,
     team_id INT,
 

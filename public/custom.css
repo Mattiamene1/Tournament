@@ -199,6 +199,9 @@ h3 {
 /* =========================
    PLAYER ROW
 ========================= */
+/* Default player row.
+   Used by teams.html and team/player rosters.
+   Keep this FLEX so teams.html does not break. */
 .player {
   display: flex;
   justify-content: space-between;
@@ -215,6 +218,7 @@ h3 {
 
 .player-link {
   cursor: pointer;
+  min-width: 0;
 }
 
 .player-link:hover {
@@ -231,6 +235,59 @@ h3 {
   color: gold;
   font-size: 18px;
   margin-left: 4px;
+}
+
+/* players.html only.
+   This page has 4 columns:
+   35% player | 20% role | 20% rating | 25% team */
+#players-container .player {
+  display: grid;
+  grid-template-columns: 35% 20% 20% 25%;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 0;
+}
+
+#players-container .player > * {
+  min-width: 0;
+  margin: 0;
+}
+
+#players-container .player > *:nth-child(1) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#players-container .player > *:nth-child(2) {
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#players-container .player > *:nth-child(3) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  flex-wrap: wrap;
+}
+
+#players-container .player > *:nth-child(4) {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding-right: 5%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#players-container .player-rating {
+  margin: 0;
 }
 
 /* =========================
@@ -1443,6 +1500,13 @@ h3 {
 
   .player {
     font-size: 17px;
+    padding: 12px 0;
+  }
+
+  #players-container .player {
+    grid-template-columns: 35% 20% 20% 25%;
+    font-size: 14px;
+    gap: 6px;
     padding: 12px 0;
   }
 

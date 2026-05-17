@@ -1,13 +1,53 @@
+const fs = require('fs');
+const path = require('path');
 const Player = require('../models/players.model');
 
 // Create Player
 async function createPlayer(req, res) {
   try {
     const id = await Player.createPlayer(req.body);
-    res.status(201).json({ success: true, player_id: id });
+
+    if (req.file) {
+      const playersDir = path.join(
+        __dirname,
+        '..',
+        '..',
+        'public',
+        'assets',
+        'img',
+        'players'
+      );
+
+      if (!fs.existsSync(playersDir)) {
+        fs.mkdirSync(playersDir, { recursive: true });
+      }
+
+      const finalPath = path.join(playersDir, `${id}.png`);
+
+      fs.renameSync(req.file.path, finalPath);
+    }
+
+    res.status(201).json({
+      success: true,
+      player_id: id
+    });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({
+        error: 'Numero di maglia già utilizzato in questa squadra'
+      });
+    }
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 }
 
@@ -15,8 +55,10 @@ async function createPlayer(req, res) {
 async function getPlayers(req, res) {
   try {
     const filters = {
-      team_id: req.query.team_id,
+      first_name: req.query.first_name,
+      last_name: req.query.last_name,
       role: req.query.role,
+      team_id: req.query.team_id,
       rating: req.query.rating
     };
 

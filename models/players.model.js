@@ -14,7 +14,7 @@ async function createPlayer(data) {
     data.role,
     data.rating,
     data.shirt_number,
-    data.team_id
+    data.team_id || null
   ];
 
   const [result] = await db.execute(sql, params);
@@ -22,31 +22,50 @@ async function createPlayer(data) {
 }
 
 // Retrieve Players
-async function getPlayers(filters) {
+async function getPlayers(filters = {}) {
   let sql = `
-    SELECT *
-    FROM players
+    SELECT
+      p.*,
+      t.name AS team_name
+    FROM players p
+    LEFT JOIN teams t ON p.team_id = t.id
     WHERE 1=1
   `;
 
   const params = [];
 
-  if (filters.team_id) {
-    sql += ' AND team_id = ?';
-    params.push(filters.team_id);
+  if (filters.first_name) {
+    sql += ' AND p.first_name LIKE ?';
+    params.push(`%${filters.first_name}%`);
+  }
+
+  if (filters.last_name) {
+    sql += ' AND p.last_name LIKE ?';
+    params.push(`%${filters.last_name}%`);
   }
 
   if (filters.role) {
-    sql += ' AND role = ?';
+    sql += ' AND p.role = ?';
     params.push(filters.role);
   }
 
+  if (filters.team_id) {
+    sql += ' AND p.team_id = ?';
+    params.push(filters.team_id);
+  }
+
   if (filters.rating) {
-    sql += ' AND rating = ?';
+    sql += ' AND p.rating = ?';
     params.push(filters.rating);
   }
 
-  sql += ' ORDER BY shirt_number ASC';
+  sql += `
+    ORDER BY
+      t.name ASC,
+      p.shirt_number ASC,
+      p.last_name ASC,
+      p.first_name ASC
+  `;
 
   const [rows] = await db.execute(sql, params);
   return rows;

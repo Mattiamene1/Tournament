@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Giocatori</title>
+
+  <link rel="stylesheet" href="./custom.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<header class="navbar">
+    <div class="logo">
+        <img src="/assets/img/wildcard_logo.png" alt="Torneo Wildcard" class="logo-img">
+        <span>WILDCARD</span>
+    </div>
+
+    <nav>
+        <a href="index.html"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
+        <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
+        <a class="active" href="players.html"><i class="fa-solid fa-users"></i> Giocatori</a>
+        <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
+        <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+    </nav>
+</header>
+
+<div class="container">
+
+    <div class="page-header-with-action">
+        <h1>👥 Giocatori</h1>
+
+        <button id="toggle-create-player-btn" class="team-edit-toggle hidden" onclick="toggleCreatePlayer()">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+    </div>
+
+    <div id="create-player-box" class="admin-box hidden">
+        <h3><i class="fa-solid fa-plus"></i> Crea giocatore</h3>
+
+        <div class="admin-grid">
+
+            <div class="admin-field">
+                <label>Nome *</label>
+                <input id="player-first-name" placeholder="Es. Mario">
+            </div>
+
+            <div class="admin-field">
+                <label>Cognome *</label>
+                <input id="player-last-name" placeholder="Es. Rossi">
+            </div>
+
+            <div class="admin-field">
+                <label>Ruolo *</label>
+                <select id="player-role">
+                <option value="POR">Portiere</option>
+                <option value="DIF">Difensore</option>
+                <option value="CEN">Centrocampista</option>
+                <option value="ATT">Attaccante</option>
+                <option value="PRE">Presidente</option>
+                </select>
+            </div>
+
+            <div class="admin-field">
+                <label>Rating *</label>
+                <select id="player-rating">
+                    <option value="1">1 ⭐</option>
+                    <option value="2">2 ⭐⭐</option>
+                    <option value="3">3 ⭐⭐⭐</option>
+                    <option value="4">4 ⭐⭐⭐⭐</option>
+                    <option value="5">5 ⭐⭐⭐⭐⭐</option>
+                </select>
+            </div>
+
+            <div class="admin-field">
+                <label>Numero maglia *</label>
+                <input id="player-shirt-number" type="number" min="0" placeholder="Es. 10">
+            </div>
+
+            <div class="admin-field">
+                <label>Squadra opzionale</label>
+
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <img id="selected-team-logo" src="" style="width:38px; height:38px; object-fit:contain; display:none;">
+                    <select id="player-team" onchange="updateSelectedTeamLogo()">
+                        <option value="">Nessuna squadra</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="admin-field">
+                <label>Foto giocatore</label>
+                <input id="player-photo" type="file" accept="image/*" capture="environment">
+            </div>
+
+            <div class="admin-field">
+                <button onclick="createPlayer()">
+                    <i class="fa-solid fa-save"></i> Crea giocatore
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="players-container">
+        <p>Caricamento giocatori...</p>
+    </div>
+
+</div>
+
+    <script>
+        let logged = false;
+        let createPlayerMode = false;
+        let teams = [];
+        let players = [];
+
+        async function checkAuth() {
+        try {
+            const res = await fetch('/me');
+            const data = await res.json();
+
+            logged = data.logged;
+
+            const btn = document.getElementById('toggle-create-player-btn');
+
+            if (logged) {
+            btn.classList.remove('hidden');
+            } else {
+            btn.classList.add('hidden');
+            }
+
+        } catch {
+            logged = false;
+        }
+        }
+
+        async function loadPage() {
+        try {
+            const teamsRes = await fetch('/teams');
+            teams = await teamsRes.json();
+
+            const playersRes = await fetch('/players');
+            players = await playersRes.json();
+
+            renderTeamSelect();
+            renderPlayers();
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('players-container').innerHTML =
+            '<p style="color:red;">Errore nel caricamento giocatori</p>';
+        }
+        }
+
+        function toggleCreatePlayer() {
+            createPlayerMode = !createPlayerMode;
+
+            const box = document.getElementById('create-player-box');
+            const icon = document.querySelector('#toggle-create-player-btn i');
+
+            if (createPlayerMode) {
+                box.classList.remove('hidden');
+                icon.className = 'fa-solid fa-xmark';
+            } else {
+                box.classList.add('hidden');
+                icon.className = 'fa-solid fa-plus';
+            }
+        }
+
+        function renderTeamSelect() {
+            const select = document.getElementById('player-team');
+
+            select.innerHTML = `
+                <option value="">Nessuna squadra</option>
+                ${teams.map(team => `
+                <option value="${team.id}" data-logo="${getTeamLogo(team.name)}">
+                    ${formatTeamName(team.name)}
+                </option>
+                `).join('')}
+            `;
+
+            updateSelectedTeamLogo();
+        }
+
+        function updateSelectedTeamLogo() {
+            const select = document.getElementById('player-team');
+            const selected = select.options[select.selectedIndex];
+            const logo = selected.dataset.logo;
+            const img = document.getElementById('selected-team-logo');
+
+            if (!logo) {
+                img.style.display = 'none';
+                img.src = '';
+                return;
+            }
+
+            img.src = logo;
+            img.style.display = 'block';
+            img.onerror = () => {
+                img.style.display = 'none';
+            };
+        }
+
+        async function createPlayer() {
+            const first_name = document.getElementById('player-first-name').value.trim();
+            const last_name = document.getElementById('player-last-name').value.trim();
+            const role = document.getElementById('player-role').value;
+            const rating = document.getElementById('player-rating').value;
+            const shirt_number = document.getElementById('player-shirt-number').value;
+            const team_id = document.getElementById('player-team').value;
+            const photo = document.getElementById('player-photo').files[0];
+
+            if (!first_name || !last_name || !role || !rating || !shirt_number) {
+                alert('Compila tutti i campi obbligatori');
+                return;
+            }
+
+            const formData = new FormData();
+
+            formData.append('first_name', first_name);
+            formData.append('last_name', last_name);
+            formData.append('role', role);
+            formData.append('rating', rating);
+            formData.append('shirt_number', shirt_number);
+
+            if (team_id) {
+                formData.append('team_id', team_id);
+            }
+
+            if (photo) {
+                formData.append('photo', photo);
+            }
+
+            const res = await fetch('/players', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                alert(data.error || 'Errore creazione giocatore');
+                return;
+            }
+
+            resetCreatePlayerForm();
+
+            createPlayerMode = false;
+            document.getElementById('create-player-box').classList.add('hidden');
+            document.querySelector('#toggle-create-player-btn i').className = 'fa-solid fa-plus';
+
+            await loadPage();
+        }
+
+        function resetCreatePlayerForm() {
+            document.getElementById('player-first-name').value = '';
+            document.getElementById('player-last-name').value = '';
+            document.getElementById('player-role').value = 'POR';
+            document.getElementById('player-rating').value = '1';
+            document.getElementById('player-shirt-number').value = '';
+            document.getElementById('player-team').value = '';
+            document.getElementById('player-photo').value = '';
+            updateSelectedTeamLogo();
+        }
+
+        function renderPlayers() {
+            const container = document.getElementById('players-container');
+
+            if (!players.length) {
+                container.innerHTML = '<p>Nessun giocatore disponibile.</p>';
+                return;
+            }
+
+            container.innerHTML = players.map(player => `
+                <div class="player">
+                <span class="player-link" onclick="goToPlayer(${player.id})">
+                    <img
+                    src="/assets/img/players/${player.id}.png"
+                    onerror="this.style.display='none'"
+                    style="width:34px; height:34px; border-radius:50%; object-fit:cover; margin-right:8px;"
+                    >
+
+                    ${
+                    player.role !== 'PRE'
+                    ? `
+                    <span class="shirt-badge">
+                        <i class="fa-solid fa-shirt"></i>
+                        <span class="shirt-number">${player.shirt_number}</span>
+                    </span>
+                    `
+                    : ''
+                    }
+
+                    ${formatPlayerName(player)}
+                </span>
+
+                <span>${roleLabel(player.role)}</span>
+
+                <span class="player-rating stars">
+                    ${renderStars(player.rating)}
+                </span>
+
+                ${
+                    player.team_name
+                    ? `
+                    <span style="display:flex; align-items:center; gap:6px;">
+                    <img src="${getTeamLogo(player.team_name)}" onerror="this.style.display='none'" style="width:24px; height:24px; object-fit:contain;">
+                    ${formatTeamName(player.team_name)}
+                    </span>
+                    `
+                    : `<span>Nessuna squadra</span>`
+                }
+                </div>
+            `).join('');
+        }
+
+        function renderStars(rating) {
+            const value = Number(rating || 0);
+
+            return Array.from({ length: value })
+                .map(() => `<i class="fa-solid fa-star"></i>`)
+                .join('');
+        }
+
+        function roleLabel(role) {
+            switch (role) {
+                case 'POR': return 'Portiere';
+                case 'DIF': return 'Difensore';
+                case 'CEN': return 'Centrocampista';
+                case 'ATT': return 'Attaccante';
+                case 'PRE': return 'Presidente';
+                default: return role;
+            }
+        }
+
+        function formatPlayerName(player) {
+            return `${player.first_name || ''} ${player.last_name || ''}`.trim();
+        }
+
+        function formatTeamName(name) {
+            if (!name) return '';
+
+            return name
+                .split(' ')
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                .join(' ');
+        }
+
+        function getTeamLogo(name) {
+            if (!name) return '';
+
+            return `/assets/img/teams/${String(name)
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, '_')}_logo.png`;
+        }
+
+        function goToPlayer(id) {
+            window.location.href = `player.html?id=${id}`;
+        }
+
+        (async () => {
+            await checkAuth();
+            await loadPage();
+        })();
+</script>
+
+</body>
+</html>

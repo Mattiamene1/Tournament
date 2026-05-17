@@ -8,7 +8,6 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="./assets/img/favicon/favicon-16x16.png">
     <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
-
     <link rel="stylesheet" href="./custom.css">
 
     <!-- Font Awesome (versione 6+) -->
@@ -28,6 +27,7 @@
             <a href="index.html"><i class="fa-solid fa-house"></i> Home</a>
             <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
             <a class="active" href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
+            <a href="players.html"><i class="fa-solid fa-users"></i> Giocatori</a>
             <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
             <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
         </nav>
@@ -35,224 +35,221 @@
 
     <div class="container">
         <h1>🏆 Classifiche</h1>
-
-        <div id="standings-container">
-            <p>Caricamento classifiche...</p>
-        </div>
+        <div id="standings-container"><p>Caricamento classifiche...</p></div>
     </div>
 
     <script>
         async function loadStandings() {
-        try {
-            const teamsRes = await fetch('/teams');
-            const teams = await teamsRes.json();
+            try {
+                const teamsRes = await fetch('/teams');
+                const teams = await teamsRes.json();
 
-            const matchesRes = await fetch('/matches');
-            const matches = await matchesRes.json();
+                const matchesRes = await fetch('/matches');
+                const matches = await matchesRes.json();
 
-            const standingsByGroup = buildStandings(teams, matches);
+                const standingsByGroup = buildStandings(teams, matches);
 
-            const container = document.getElementById('standings-container');
-            container.innerHTML = '';
+                const container = document.getElementById('standings-container');
+                container.innerHTML = '';
 
-            Object.keys(standingsByGroup).forEach(groupName => {
-            const rows = standingsByGroup[groupName];
+                Object.keys(standingsByGroup).forEach(groupName => {
+                const rows = standingsByGroup[groupName];
 
-            container.innerHTML += `
-                <div class="standing-card">
-                <h2>${groupName}</h2>
+                container.innerHTML += `
+                    <div class="standing-card">
+                    <h2>${groupName}</h2>
 
-                <div class="standing-table-wrapper">
-                    <table class="standing-table">
-                    <thead>
-                        <tr>
-                        <th>#</th>
-                        <th>Squadra</th>
-                        <th>PG</th>
-                        <th>V</th>
-                        <th>N</th>
-                        <th>P</th>
-                        <th>PT</th>
-                        <th>GF</th>
-                        <th>GS</th>
-                        <th>DR</th>
-                        <th>Forma</th>
-                        </tr>
-                    </thead>
+                    <div class="standing-table-wrapper">
+                        <table class="standing-table">
+                        <thead>
+                            <tr>
+                            <th>#</th>
+                            <th>Squadra</th>
+                            <th>PG</th>
+                            <th>V</th>
+                            <th>N</th>
+                            <th>P</th>
+                            <th>PT</th>
+                            <th>GF</th>
+                            <th>GS</th>
+                            <th>DR</th>
+                            <th>Forma</th>
+                            </tr>
+                        </thead>
 
-                    <tbody>
-                        ${rows.map((row, index) => renderStandingRow(row, index)).join('')}
-                    </tbody>
-                    </table>
-                </div>
-                </div>
-            `;
-            });
+                        <tbody>
+                            ${rows.map((row, index) => renderStandingRow(row, index)).join('')}
+                        </tbody>
+                        </table>
+                    </div>
+                    </div>
+                `;
+                });
 
-        } catch (err) {
-            console.error(err);
-            document.getElementById('standings-container').innerHTML =
-            '<p style="color:red;">Errore nel caricamento classifiche</p>';
-        }
+            } catch (err) {
+                console.error(err);
+                document.getElementById('standings-container').innerHTML =
+                '<p style="color:red;">Errore nel caricamento classifiche</p>';
+            }
         }
 
         function buildStandings(teams, matches) {
-        const table = {};
+            const table = {};
 
-        matches.forEach(match => {
-            const groupName = match.group_name || 'Girone';
+            matches.forEach(match => {
+                const groupName = match.group_name || 'Girone';
 
-            if (!table[groupName]) table[groupName] = {};
+                if (!table[groupName]) table[groupName] = {};
 
-            ensureTeam(table[groupName], match.home_team_id, match.home_team_name);
-            ensureTeam(table[groupName], match.away_team_id, match.away_team_name);
+                ensureTeam(table[groupName], match.home_team_id, match.home_team_name);
+                ensureTeam(table[groupName], match.away_team_id, match.away_team_name);
 
-            if (match.status !== 'finished') return;
+                if (match.status !== 'finished') return;
 
-            const home = table[groupName][match.home_team_id];
-            const away = table[groupName][match.away_team_id];
+                const home = table[groupName][match.home_team_id];
+                const away = table[groupName][match.away_team_id];
 
-            const homeScore = Number(match.home_score || 0);
-            const awayScore = Number(match.away_score || 0);
+                const homeScore = Number(match.home_score || 0);
+                const awayScore = Number(match.away_score || 0);
 
-            home.played++;
-            away.played++;
+                home.played++;
+                away.played++;
 
-            home.goalsFor += homeScore;
-            home.goalsAgainst += awayScore;
+                home.goalsFor += homeScore;
+                home.goalsAgainst += awayScore;
 
-            away.goalsFor += awayScore;
-            away.goalsAgainst += homeScore;
+                away.goalsFor += awayScore;
+                away.goalsAgainst += homeScore;
 
-            if (homeScore > awayScore) {
-            home.wins++;
-            home.points += 3;
-            away.losses++;
+                if (homeScore > awayScore) {
+                home.wins++;
+                home.points += 3;
+                away.losses++;
 
-            home.form.push({ result: 'W', matchId: match.id });
-            away.form.push({ result: 'L', matchId: match.id });
+                home.form.push({ result: 'W', matchId: match.id });
+                away.form.push({ result: 'L', matchId: match.id });
 
-            } else if (homeScore < awayScore) {
-            away.wins++;
-            away.points += 3;
-            home.losses++;
+                } else if (homeScore < awayScore) {
+                away.wins++;
+                away.points += 3;
+                home.losses++;
 
-            away.form.push({ result: 'W', matchId: match.id });
-            home.form.push({ result: 'L', matchId: match.id });
+                away.form.push({ result: 'W', matchId: match.id });
+                home.form.push({ result: 'L', matchId: match.id });
 
-            } else {
-            home.draws++;
-            away.draws++;
-            home.points++;
-            away.points++;
+                } else {
+                home.draws++;
+                away.draws++;
+                home.points++;
+                away.points++;
 
-            home.form.push({ result: 'D', matchId: match.id });
-            away.form.push({ result: 'D', matchId: match.id });
-            }
-        });
-
-        Object.keys(table).forEach(groupName => {
-            table[groupName] = Object.values(table[groupName])
-            .map(row => ({
-                ...row,
-                goalDifference: row.goalsFor - row.goalsAgainst
-            }))
-            .sort((a, b) => {
-                if (b.points !== a.points) return b.points - a.points;
-                if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
-                if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-                return a.name.localeCompare(b.name);
+                home.form.push({ result: 'D', matchId: match.id });
+                away.form.push({ result: 'D', matchId: match.id });
+                }
             });
-        });
 
-        return table;
+            Object.keys(table).forEach(groupName => {
+                table[groupName] = Object.values(table[groupName])
+                .map(row => ({
+                    ...row,
+                    goalDifference: row.goalsFor - row.goalsAgainst
+                }))
+                .sort((a, b) => {
+                    if (b.points !== a.points) return b.points - a.points;
+                    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+                    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+                    return a.name.localeCompare(b.name);
+                });
+            });
+
+            return table;
         }
 
         function ensureTeam(groupTable, teamId, teamName) {
-        if (!groupTable[teamId]) {
-            groupTable[teamId] = {
-            id: teamId,
-            name: teamName,
-            played: 0,
-            wins: 0,
-            draws: 0,
-            losses: 0,
-            points: 0,
-            goalsFor: 0,
-            goalsAgainst: 0,
-            goalDifference: 0,
-            form: []
-            };
-        }
+            if (!groupTable[teamId]) {
+                groupTable[teamId] = {
+                id: teamId,
+                name: teamName,
+                played: 0,
+                wins: 0,
+                draws: 0,
+                losses: 0,
+                points: 0,
+                goalsFor: 0,
+                goalsAgainst: 0,
+                goalDifference: 0,
+                form: []
+                };
+            }
         }
 
         function renderStandingRow(row, index) {
-        return `
-            <tr>
-            <td>${index + 1}</td>
+            return `
+                <tr>
+                <td>${index + 1}</td>
 
-            <td>
-                <div class="standing-team clickable" onclick="goToTeam(${row.id})">
-                <img src="${getTeamLogo(row.name)}" alt="${row.name}">
-                <span>${formatTeamName(row.name)}</span>
-                </div>
-            </td>
+                <td>
+                    <div class="standing-team clickable" onclick="goToTeam(${row.id})">
+                    <img src="${getTeamLogo(row.name)}" alt="${row.name}">
+                    <span>${formatTeamName(row.name)}</span>
+                    </div>
+                </td>
 
-            <td class="focus-col">${row.played}</td>
-            <td class="focus-col">${row.wins}</td>
-            <td class="focus-col">${row.draws}</td>
-            <td class="focus-col">${row.losses}</td>
+                <td class="focus-col">${row.played}</td>
+                <td class="focus-col">${row.wins}</td>
+                <td class="focus-col">${row.draws}</td>
+                <td class="focus-col">${row.losses}</td>
 
-            <td class="points-col">${row.points}</td>
-            <td>${row.goalsFor}</td>
-            <td>${row.goalsAgainst}</td>
-            <td>${row.goalDifference}</td>
+                <td class="points-col">${row.points}</td>
+                <td>${row.goalsFor}</td>
+                <td>${row.goalsAgainst}</td>
+                <td>${row.goalDifference}</td>
 
-            <td>
-                <div class="form-dots">
-                ${renderForm(row.form)}
-                </div>
-            </td>
-            </tr>
-        `;
+                <td>
+                    <div class="form-dots">
+                    ${renderForm(row.form)}
+                    </div>
+                </td>
+                </tr>
+            `;
         }
 
         function renderForm(form) {
-        if (!form.length) return '-';
+            if (!form.length) return '-';
 
-        return form.slice(-5).map(item => {
-            const cls = item.result === 'W'
-            ? 'win'
-            : item.result === 'D'
-                ? 'draw'
-                : 'loss';
+            return form.slice(-5).map(item => {
+                const cls = item.result === 'W'
+                ? 'win'
+                : item.result === 'D'
+                    ? 'draw'
+                    : 'loss';
 
-            return `
-            <span class="form-dot ${cls}" onclick="event.stopPropagation(); goToMatch(${item.matchId})">
-                ${item.result}
-            </span>
-            `;
-        }).join('');
+                return `
+                <span class="form-dot ${cls}" onclick="event.stopPropagation(); goToMatch(${item.matchId})">
+                    ${item.result}
+                </span>
+                `;
+            }).join('');
         }
 
         function goToTeam(id) {
-        window.location.href = `team.html?id=${id}`;
+            window.location.href = `team.html?id=${id}`;
         }
 
         function goToMatch(id) {
-        window.location.href = `match.html?id=${id}`;
+            window.location.href = `match.html?id=${id}`;
         }
 
         function getTeamLogo(name) {
-        return `/assets/img/teams/${name.toLowerCase().replace(/\s+/g, '_')}_logo.png`;
+            return `/assets/img/teams/${name.toLowerCase().replace(/\s+/g, '_')}_logo.png`;
         }
 
         function formatTeamName(name) {
-        if (!name) return '';
-        return name
-            .split(' ')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-            .join(' ');
+            if (!name) return '';
+            return name
+                .split(' ')
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                .join(' ');
         }
 
         loadStandings();
