@@ -71,16 +71,21 @@ async function loadPlayer() {
             </div>
 
             <div class="player-info">
-              <p><strong>Ruolo:</strong> ${p.role}</p>
+              <p>
+                <strong>Ruolo:</strong>
+                <span>${p.role}</span>
+              </p>
 
               ${
                 p.role !== 'PRE'
                   ? `
                   <p>
                     <strong>Numero:</strong>
-                    <span class="shirt-badge">
-                      <i class="fa-solid fa-shirt"></i>
-                      <span class="shirt-number">${p.shirt_number}</span>
+                    <span>
+                      <span class="shirt-badge">
+                        <i class="fa-solid fa-shirt"></i>
+                        <span class="shirt-number">${p.shirt_number}</span>
+                      </span>
                     </span>
                   </p>
                   `
