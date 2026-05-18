@@ -11,7 +11,6 @@ async function createPlayer(req, res) {
       const playersDir = path.join(
         __dirname,
         '..',
-        '..',
         'public',
         'assets',
         'img',
@@ -23,7 +22,6 @@ async function createPlayer(req, res) {
       }
 
       const finalPath = path.join(playersDir, `${id}.png`);
-
       fs.renameSync(req.file.path, finalPath);
     }
 
@@ -108,6 +106,43 @@ async function updatePlayer(req, res) {
   }
 }
 
+// Update Player Photo
+async function uploadPlayerPhoto(req, res) {
+  try {
+    const player = await Player.getTeamById(req.params.id);
+
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'File mancante' });
+    }
+
+    const fileName = `${(req.id_player)}.png`;
+
+    const destination = path.join(
+      __dirname,
+      '..',
+      'public',
+      'assets',
+      'img',
+      'players',
+      fileName
+    );
+
+    fs.renameSync(req.file.path, destination);
+
+    res.json({
+      success: true,
+      fileName
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 // Delete Player
 async function deletePlayer(req, res) {
   try {
@@ -123,5 +158,6 @@ module.exports = {
   getPlayers,
   getPlayerById,
   updatePlayer,
+  uploadPlayerPhoto,
   deletePlayer
 };
