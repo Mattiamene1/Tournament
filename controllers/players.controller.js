@@ -109,7 +109,7 @@ async function updatePlayer(req, res) {
 // Update Player Photo
 async function uploadPlayerPhoto(req, res) {
   try {
-    const player = await Player.getTeamById(req.params.id);
+    const player = await Player.getPlayerById(req.params.id);
 
     if (!player) {
       return res.status(404).json({ error: 'Player not found' });
@@ -119,15 +119,23 @@ async function uploadPlayerPhoto(req, res) {
       return res.status(400).json({ error: 'File mancante' });
     }
 
-    const fileName = `${(req.id_player)}.png`;
-
-    const destination = path.join(
+    const playersDir = path.join(
       __dirname,
       '..',
       'public',
       'assets',
       'img',
-      'players',
+      'players'
+    );
+
+    if (!fs.existsSync(playersDir)) {
+      fs.mkdirSync(playersDir, { recursive: true });
+    }
+
+    const fileName = `${req.params.id}.png`;
+
+    const destination = path.join(
+      playersDir,
       fileName
     );
 
@@ -137,8 +145,14 @@ async function uploadPlayerPhoto(req, res) {
       success: true,
       fileName
     });
+
   } catch (err) {
     console.error(err);
+
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
     res.status(500).json({ error: err.message });
   }
 }

@@ -7,13 +7,8 @@ const { isAuthenticated } = require('../middlewares/auth.middleware');
 
 const upload = multer({ dest: 'uploads/' });
 
-router.post(
-  '/',
-  isAuthenticated,
-  upload.single('photo'),
-  controller.createPlayer
-);
-
+router.post('/',isAuthenticated,upload.single('photo'),controller.createPlayer);
+router.post('/:id/photo',isAuthenticated,upload.single('photo'),controller.uploadPlayerPhoto);      // Update player photo
 router.get('/', controller.getPlayers);
 router.get('/:id', controller.getPlayerById);
 router.put('/:id', isAuthenticated, controller.updatePlayer);

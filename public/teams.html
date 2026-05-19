@@ -306,6 +306,10 @@
                             ${renderStars(p.rating)}
                             <span class="rating-number">(${Number(p.rating || 0)})</span>
                         </div>
+
+                        <button class="player-delete-btn" onclick="deletePlayer(event, ${p.id})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                         `
                         : ''
                     }
@@ -324,6 +328,23 @@
         return Array.from({ length: value })
             .map(() => `<i class="fa-solid fa-star"></i>`)
             .join('');
+    }
+
+    async function deletePlayer(event, id) {
+        event.stopPropagation();
+
+        if (!confirm('Eliminare questo giocatore?')) return;
+
+        const res = await fetch(`/players/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (!res.ok) {
+            alert('Errore eliminazione giocatore');
+            return;
+        }
+
+        await loadTeams();
     }
 
     function getTeamLogo(teamName) {

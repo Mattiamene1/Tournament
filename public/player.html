@@ -19,9 +19,7 @@
 <body>
 
 <div class="container">
-
   <!-- <a href="teams.html" class="back">← Torna alle squadre</a> -->
-
   <div id="player-container">
     <p>Caricamento player...</p>
   </div>
@@ -29,8 +27,20 @@
 </div>
 
 <script>
+
+let logged = false;
 const params = new URLSearchParams(window.location.search);
 const playerId = params.get('id');
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/me');
+    const data = await res.json();
+    logged = data.logged;
+  } catch {
+    logged = false;
+  }
+}
 
 async function loadPlayer() {
   try {
@@ -51,8 +61,6 @@ async function loadPlayer() {
     const assists = events.filter(e =>
       String(e.assist_player_id) === String(playerId)
     ).length;
-
-    let logged = false;
 
     const container = document.getElementById('player-container');
 
@@ -91,6 +99,13 @@ async function loadPlayer() {
                   `
                   : ''
               }
+              ${
+                logged
+                  ? `<span class="player-rating">
+                      ${renderStars(p.rating)}
+                    </span>`
+                  : ''
+              }
             </div>
           </div>
 
@@ -106,19 +121,21 @@ async function loadPlayer() {
             </div>
           </div>
 
-          ${
-            logged
-              ? `<div class="player-rating">
-                   ${renderStars(p.rating)}
-                 </div>`
-              : ''
-          }
-
         </div>
 
-        <div class="player-image">
-          <img src="/assets/img/players/${p.id}.png"
-               alt="${p.first_name} ${p.last_name}">
+        <div class="player-image" id="player-image-box">
+          <img
+            src="/assets/img/players/${p.id}.png"
+            alt="${p.first_name} ${p.last_name}"
+            onerror="
+              this.onerror=null;
+              ${
+                logged
+                  ? `showUploadPlayerPhotoButton(${p.id})`
+                  : `this.src='/assets/img/players/default.png'`
+              };
+            "
+          >
         </div>
 
       </div>
@@ -140,7 +157,50 @@ function renderStars(rating) {
     .join('');
 }
 
-loadPlayer();
+function showUploadPlayerPhotoButton(id) {
+  console.log("Photo not found")
+  const box = document.getElementById('player-image-box');
+
+  box.innerHTML = `
+    <button class="upload-player-photo-btn" onclick="uploadPlayerPhoto(${id})">
+      <i class="fa-solid fa-upload"></i>
+      Carica foto giocatore
+    </button>
+  `;
+}
+
+async function uploadPlayerPhoto(id) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const res = await fetch(`/players/${id}/photo`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      alert('Errore caricamento foto');
+      return;
+    }
+
+    await loadPlayer();
+  };
+
+  input.click();
+}
+
+(async () => {
+  await checkAuth();
+  loadPlayer();
+})();
 </script>
 
 </body>
