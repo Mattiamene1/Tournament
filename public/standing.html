@@ -98,6 +98,111 @@
             }
         }
 
+        async function loadScorers() {
+            try {
+                const [eventsRes, playersRes] = await Promise.all([
+                    fetch('/match-events'),
+                    fetch('/players')
+                ]);
+
+                const events  = await eventsRes.json();
+                const players = await playersRes.json();
+
+                // Conta gol per player_id
+                const scorerMap = {};
+
+                events.forEach(e => {
+                    if (e.event_type !== 'goal' && e.event_type !== 'bonus') return;
+                    if (!e.player_id) return;
+
+                    if (!scorerMap[e.player_id]) {
+                        scorerMap[e.player_id] = { goals: 0, assists: 0 };
+                    }
+                    scorerMap[e.player_id].goals += 1;
+                });
+
+                // Conta assist
+                events.forEach(e => {
+                    if (!e.assist_player_id) return;
+
+                    if (!scorerMap[e.assist_player_id]) {
+                        scorerMap[e.assist_player_id] = { goals: 0, assists: 0 };
+                    }
+                    scorerMap[e.assist_player_id].assists += 1;
+                });
+
+                // Arricchisci con dati giocatore
+                const rows = Object.entries(scorerMap)
+                .map(([playerId, stats]) => {
+                    const p = players.find(pl => String(pl.id) === String(playerId));
+                    return {
+                    playerId,
+                    name:     p ? `${p.first_name} ${p.last_name}` : `#${playerId}`,
+                    teamName: p?.team_name || '',
+                    ...stats
+                    };
+                })
+                .filter(r => r.goals > 0)
+                .sort((a, b) => b.goals - a.goals || b.assists - a.assists);
+
+                const container = document.getElementById('standings-scorers');
+
+                if (!rows.length) {
+                    container.innerHTML = '<p>Nessun marcatore disponibile.</p>';
+                    return;
+                }
+
+                container.innerHTML = `
+                <div class="standing-card">
+                    <div class="standing-table-wrapper">
+                    <table class="standing-table">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Giocatore</th>
+                            <th>Squadra</th>
+                            <th title="Gol">⚽</th>
+                            <th title="Assist">🅰️</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        ${rows.map((row, i) => `
+                            <tr>
+                            <td>${i + 1}</td>
+                            <td>
+                                <span class="standing-team clickable" onclick="goToPlayer(${row.playerId})">
+                                <span>${row.name}</span>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="standing-team">
+                                ${row.teamName ? `
+                                    <img src="${getTeamLogo(row.teamName)}" onerror="this.style.display='none'">
+                                    <span>${formatTeamName(row.teamName)}</span>
+                                ` : '-'}
+                                </div>
+                            </td>
+                            <td class="points-col">${row.goals}</td>
+                            <td class="focus-col">${row.assists}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+                `;
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('standings-scorers').innerHTML =
+                '<p style="color:red;">Errore nel caricamento marcatori</p>';
+            }
+        }
+
+        function goToPlayer(id) {
+            window.location.href = `player.html?id=${id}`;
+        }
+
         function buildStandings(teams, matches) {
             const table = {};
 
@@ -258,6 +363,7 @@
         }
 
         loadStandings();
+        loadScorers();
     </script>
 
 </body>
