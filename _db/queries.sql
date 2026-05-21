@@ -84,6 +84,7 @@ CREATE TABLE matches (
     pitch_id INT,
     referee_id INT,
     status ENUM('scheduled','live','finished') DEFAULT 'scheduled',
+    phase ENUM('not_started','first_half','halftime','second_half','ended') DEFAULT 'not_started',
 
     CONSTRAINT fk_match_group
         FOREIGN KEY (group_id) REFERENCES tournament_groups(id)
@@ -115,7 +116,7 @@ ALTER TABLE matches ADD COLUMN ended_at DATETIME NULL;
 CREATE TABLE bonuses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    value INT DEFAULT 1
+    goal_value INT DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 /***********************************************/
@@ -124,17 +125,20 @@ CREATE TABLE match_events (
 
     match_id INT NOT NULL,
     team_id INT NOT NULL,
-
     player_id INT NULL,
     assist_player_id INT NULL,
 
     event_type ENUM(
-        'goal',
-        'assist',
+        'goal','assist',
         'yellow_card',
         'red_card',
         'second_yellow',
-        'bonus'
+        'bonus',
+        'match_start',
+        'first_half_end',
+        'second_half_start',
+        'match_end',
+        'extra_time'
     ) NOT NULL,
 
     goal_type ENUM(
@@ -152,7 +156,6 @@ CREATE TABLE match_events (
     ) NULL,
 
     bonus_id INT NULL,
-
     event_value INT DEFAULT 1,
 
     minute INT NULL,
@@ -202,7 +205,7 @@ CREATE TABLE chiosco_beers (
 /***********************************************/
 
 
-/ ** TEAMS **/
+-- TEAMS
 INSERT INTO teams (name) VALUES
 ('Shangai'),
 ('Bastioni'),
@@ -210,66 +213,68 @@ INSERT INTO teams (name) VALUES
 ('Slavatar'),
 ('Los Locos'),
 ('Sperminator');
+('Red Evil');
+('Tuborgsons');
 
 
-/ ** PLAYERS - Shangai **/
+-- PLAYERS - Shangai
 INSERT INTO players (first_name, last_name, role, rating, team_id) VALUES
-('David', 'Zanatta', 'ATT', '4', 1),
-('Marco', 'Battistella', 'DIF', '3', 1),
-('Andrea', 'Giovannelli', 'POR', '2', 1),
-('Anthony', 'Cavanha', 'CEN', '5', 1),
-('Enrico', 'Battistella', 'CEN', '3', 1),
-('Nicholas', 'Rossetto', 'DIF', '2', 1),
-('Nicola', 'Trabucco', 'ATT', '4', 1);
+('David', 'Zanatta', 'ATT', 4, 1),
+('Marco', 'Battistella', 'DIF', 3, 1),
+('Andrea', 'Giovannelli', 'POR', 2, 1),
+('Anthony', 'Cavanha', 'CEN', 5, 1),
+('Enrico', 'Battistella', 'CEN', 3, 1),
+('Nicholas', 'Rossetto', 'DIF', 2, 1),
+('Nicola', 'Trabucco', 'ATT', 4, 1);
 
-/ ** PLAYERS - Bastioni **/
+-- PLAYERS - Bastioni
 INSERT INTO players (first_name, last_name, role, rating, team_id) VALUES
-('Matteo', 'Amadio', 'POR', '3', 2),
-('Tommaso', 'Fantelli', 'ATT', '4', 2),
-('Riccardo', 'Zanetti', 'DIF', '2', 2),
-('Alessio', 'Pinarello', 'DIF', '3', 2),
-('Oussama', 'Sabir', 'CEN', '5', 2),
-('Alessandro', 'Papa', 'CEN', '2', 2);
+('Matteo', 'Amadio', 'POR', 3, 2),
+('Tommaso', 'Fantelli', 'ATT', 4, 2),
+('Riccardo', 'Zanetti', 'DIF', 2, 2),
+('Alessio', 'Pinarello', 'DIF', 3, 2),
+('Oussama', 'Sabir', 'CEN', 5, 2),
+('Alessandro', 'Papa', 'CEN', 2, 2);
 
-/ ** PLAYERS - CSP Bluetiger **/
+-- PLAYERS - CSP Bluetiger
 INSERT INTO players (first_name, last_name, role, rating, team_id) VALUES
-('Marco', 'Stefani', 'ATT', '5', 3),
-('Riccardo', 'Fusco', 'CEN', '3', 3),
-('Jacopo', 'Maso', 'POR', '2', 3),
-('Michele', 'Marian', 'CEN', '4', 3),
-('Luis', 'Marinello', 'ATT', '3', 3),
-('Sandri', 'Nicholas', 'DIF', '2', 3),
-('Alex', 'Nalesso', 'DIF', '4', 3);
+('Marco', 'Stefani', 'ATT', 5, 3),
+('Riccardo', 'Fusco', 'CEN', 3, 3),
+('Jacopo', 'Maso', 'POR', 2, 3),
+('Michele', 'Marian', 'CEN', 4, 3),
+('Luis', 'Marinello', 'ATT', 3, 3),
+('Nicholas', 'Sandri', 'DIF', 2, 3),
+('Alex', 'Nalesso', 'DIF', 4, 3);
 
-/ ** PLAYERS - Slavatar **/
+-- PLAYERS - Slavatar
 INSERT INTO players (first_name, last_name, role, rating, team_id) VALUES
-('Mattia', 'Meneghin', 'POR', '3', 4),
-('Alvise', 'Magli', 'CEN', '2', 4),
-('Achraf', 'Rezzou', 'ATT', '5', 4),
-('Alex', 'Sima', 'CEN', '3', 4),
-('Mauro', 'Panziera', 'DIF', '3', 4),
-('Daniel', 'Trevisan', 'DIF', '2', 4),
-('Alessio', 'Visentin', 'ATT', '4', 4);
+('Mattia', 'Meneghin', 'POR', 3, 4),
+('Alvise', 'Magli', 'CEN', 2, 4),
+('Achraf', 'Rezzou', 'ATT', 5, 4),
+('Alex', 'Sima', 'CEN', 3, 4),
+('Mauro', 'Panziera', 'DIF', 3, 4),
+('Daniel', 'Trevisan', 'DIF', 2, 4),
+('Alessio', 'Visentin', 'ATT', 4, 4);
 
-/ ** PLAYERS - Los Locos **/
+-- PLAYERS - Los Locos
 INSERT INTO players (first_name, last_name, role, rating, team_id) VALUES
-('Luca', 'Perazzetta', 'POR', '5', 5),
-('Nicola', 'Zanatta', 'DIF', '3', 5),
-('Leo', 'Calliman', 'CEN', '4', 5),
-('Matteo', 'Agresti', 'ATT', '5', 5),
-('Tommaso', 'Guizzo', 'CEN', '3', 5),
-('Gianpi', 'Sgarbugaro', 'DIF', '2', 5),
-('Matteo', 'Marcon', 'ATT', '4', 5);
+('Luca', 'Perazzetta', 'POR', 5, 5),
+('Nicola', 'Zanatta', 'DIF', 3, 5),
+('Leo', 'Calliman', 'CEN', 4, 5),
+('Matteo', 'Agresti', 'ATT', 5, 5),
+('Tommaso', 'Guizzo', 'CEN', 3, 5),
+('Gianpi', 'Sgarbugaro', 'DIF', 2, 5),
+('Matteo', 'Marcon', 'ATT', 4, 5);
 
-/ ** PLAYERS - Sperminators **/
+-- PLAYERS - Sperminators
 INSERT INTO players (first_name, last_name, role, rating, team_id) VALUES
-('Luca', 'Perazzetta', 'POR', '5', 5),
-('Nicola', 'Zanatta', 'DIF', '3', 5),
-('Leo', 'Calliman', 'CEN', '4', 5),
-('Matteo', 'Agresti', 'ATT', '5', 5),
-('Tommaso', 'Guizzo', 'CEN', '3', 5),
-('Gianpi', 'Sgarbugaro', 'DIF', '2', 5),
-('Matteo', 'Marcon', 'ATT', '4', 5);
+('Mattia', 'Meneghin', 'POR', 4, 6),
+('Daniel', 'Trevisan', 'DIF', 3, 6),
+('Alex', 'Sima', 'CEN', 4, 6),
+('Achraf', 'Rezzou', 'ATT', 5, 6),
+('Mauro', 'Panziera', 'CEN', 3, 6),
+('Alessio', 'Visentin', 'DIF', 2, 6),
+('Alvise', 'Magli', 'ATT', 5, 6);
 
 /* =========================
    MATCHES - GIRONE A
