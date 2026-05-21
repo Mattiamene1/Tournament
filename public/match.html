@@ -297,34 +297,42 @@ function renderAddEventBox() {
 function renderEvents(events) {
   if (!events || !events.length) return '<p>Nessun evento.</p>';
 
-  return events.map(e => {
-    const isHome = String(e.team_id) === String(matchData.home_team_id);
-    const sideClass = isHome ? 'home-event' : 'away-event';
-    const playerName = e.player_name || formatEventPlayerName(e);
-    const playerId   = e.player_id;
+  return `
+    <div class="timeline">
+      ${events.map(e => {
+        const isHome = String(e.team_id) === String(matchData.home_team_id);
+        const playerName = e.player_name || formatEventPlayerName(e);
+        const playerId   = e.player_id;
 
-    return `
-      <div class="event-row ${sideClass}">
-        <div class="event-minute">${e.minute}'</div>
-        <div class="event-icon">${eventIcon(e.event_type)}</div>
-        <div class="event-content">
-          <strong
-            ${playerId ? `class="event-player-link" onclick="goToPlayer(${playerId})"` : ''}
-          >${playerName}</strong>
-          <span class="event-label">${eventLabel(e)}</span>
-          ${e.assist_player_id ? `
-            <span class="event-assist">
-              🅰️
-              <span
-                class="event-player-link"
-                onclick="goToPlayer(${e.assist_player_id})"
-              >${e.assist_player_name || ''}</span>
-            </span>
-          ` : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
+        const card = `
+          <div class="tl-card">
+            <div class="tl-label">${eventLabel(e)}</div>
+            <div class="tl-player ${playerId ? 'event-player-link' : ''}"
+              ${playerId ? `onclick="goToPlayer(${playerId})"` : ''}>
+              ${e.shirt_number ? `#${e.shirt_number} ` : ''}${playerName}
+            </div>
+            ${e.assist_player_id ? `
+              <div class="tl-assist">
+                🅰️ <span class="event-player-link" onclick="goToPlayer(${e.assist_player_id})">
+                  ${e.assist_player_name || ''}
+                </span>
+              </div>` : ''}
+          </div>
+        `;
+
+        return `
+          <div class="tl-row">
+            <div class="tl-home">${isHome ? card : ''}</div>
+            <div class="tl-center">
+              <div class="tl-icon">${eventIcon(e.event_type)}</div>
+              <div class="tl-minute">${e.minute}'</div>
+            </div>
+            <div class="tl-away">${!isHome ? card : ''}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
 }
 
 function formatEventPlayerName(e) {
