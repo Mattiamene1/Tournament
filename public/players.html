@@ -110,261 +110,421 @@
 
 </div>
 
-    <script>
-        let logged = false;
-        let createPlayerMode = false;
-        let teams = [];
-        let players = [];
+<script>
+  let logged = false;
+  let createPlayerMode = false;
+  let teams   = [];
+  let players = [];
 
-        async function checkAuth() {
-        try {
-            const res = await fetch('/me');
-            const data = await res.json();
+  /* ── Auth ──────────────────────────────────────────────────── */
+  async function checkAuth() {
+    try {
+      const res  = await fetch('/me');
+      const data = await res.json();
+      logged = data.logged;
 
-            logged = data.logged;
+      const btn = document.getElementById('toggle-create-player-btn');
+      btn.classList.toggle('hidden', !logged);
+    } catch {
+      logged = false;
+    }
+  }
 
-            const btn = document.getElementById('toggle-create-player-btn');
+  /* ── Load page data ────────────────────────────────────────── */
+  async function loadPage() {
+    try {
+      const [teamsRes, playersRes] = await Promise.all([
+        fetch('/teams'),
+        fetch('/players')
+      ]);
 
-            if (logged) {
-            btn.classList.remove('hidden');
-            } else {
-            btn.classList.add('hidden');
-            }
+      teams   = await teamsRes.json();
+      players = await playersRes.json();
 
-        } catch {
-            logged = false;
-        }
-        }
+      renderTeamSelect();
+      renderPlayers();
+    } catch (err) {
+      console.error(err);
+      document.getElementById('players-container').innerHTML =
+        '<p style="color:red;">Errore nel caricamento giocatori</p>';
+    }
+  }
 
-        async function loadPage() {
-        try {
-            const teamsRes = await fetch('/teams');
-            teams = await teamsRes.json();
+  /* ── Create-player toggle ──────────────────────────────────── */
+  function toggleCreatePlayer() {
+    createPlayerMode = !createPlayerMode;
 
-            const playersRes = await fetch('/players');
-            players = await playersRes.json();
+    const box  = document.getElementById('create-player-box');
+    const icon = document.querySelector('#toggle-create-player-btn i');
 
-            renderTeamSelect();
-            renderPlayers();
+    box.classList.toggle('hidden', !createPlayerMode);
+    icon.className = createPlayerMode ? 'fa-solid fa-xmark' : 'fa-solid fa-plus';
+  }
 
-        } catch (err) {
-            console.error(err);
-            document.getElementById('players-container').innerHTML =
-            '<p style="color:red;">Errore nel caricamento giocatori</p>';
-        }
-        }
+  function renderTeamSelect() {
+    const select = document.getElementById('player-team');
+    select.innerHTML = `
+      <option value="">Nessuna squadra</option>
+      ${teams.map(t => `
+        <option value="${t.id}" data-logo="${getTeamLogo(t.name)}">
+          ${formatTeamName(t.name)}
+        </option>
+      `).join('')}
+    `;
+    updateSelectedTeamLogo();
+  }
 
-        function toggleCreatePlayer() {
-            createPlayerMode = !createPlayerMode;
+  function updateSelectedTeamLogo() {
+    const select   = document.getElementById('player-team');
+    const selected = select.options[select.selectedIndex];
+    const logo     = selected.dataset.logo;
+    const img      = document.getElementById('selected-team-logo');
 
-            const box = document.getElementById('create-player-box');
-            const icon = document.querySelector('#toggle-create-player-btn i');
+    if (!logo) { img.style.display = 'none'; img.src = ''; return; }
 
-            if (createPlayerMode) {
-                box.classList.remove('hidden');
-                icon.className = 'fa-solid fa-xmark';
-            } else {
-                box.classList.add('hidden');
-                icon.className = 'fa-solid fa-plus';
-            }
-        }
+    img.src          = logo;
+    img.style.display = 'block';
+    img.onerror      = () => { img.style.display = 'none'; };
+  }
 
-        function renderTeamSelect() {
-            const select = document.getElementById('player-team');
+  async function createPlayer() {
+    const first_name   = document.getElementById('player-first-name').value.trim();
+    const last_name    = document.getElementById('player-last-name').value.trim();
+    const role         = document.getElementById('player-role').value;
+    const rating       = document.getElementById('player-rating').value;
+    const shirt_number = document.getElementById('player-shirt-number').value;
+    const team_id      = document.getElementById('player-team').value;
+    const photo        = document.getElementById('player-photo').files[0];
 
-            select.innerHTML = `
-                <option value="">Nessuna squadra</option>
-                ${teams.map(team => `
-                <option value="${team.id}" data-logo="${getTeamLogo(team.name)}">
-                    ${formatTeamName(team.name)}
-                </option>
-                `).join('')}
-            `;
+    if (!first_name || !last_name || !role || !rating || !shirt_number) {
+      alert('Compila tutti i campi obbligatori');
+      return;
+    }
 
-            updateSelectedTeamLogo();
-        }
+    const formData = new FormData();
+    formData.append('first_name',   first_name);
+    formData.append('last_name',    last_name);
+    formData.append('role',         role);
+    formData.append('rating',       rating);
+    formData.append('shirt_number', shirt_number);
+    if (team_id) formData.append('team_id', team_id);
+    if (photo)   formData.append('photo',   photo);
 
-        function updateSelectedTeamLogo() {
-            const select = document.getElementById('player-team');
-            const selected = select.options[select.selectedIndex];
-            const logo = selected.dataset.logo;
-            const img = document.getElementById('selected-team-logo');
+    const res  = await fetch('/players', { method: 'POST', body: formData });
+    const data = await res.json().catch(() => ({}));
 
-            if (!logo) {
-                img.style.display = 'none';
-                img.src = '';
-                return;
-            }
+    if (!res.ok) { alert(data.error || 'Errore creazione giocatore'); return; }
 
-            img.src = logo;
-            img.style.display = 'block';
-            img.onerror = () => {
-                img.style.display = 'none';
-            };
-        }
+    resetCreatePlayerForm();
+    createPlayerMode = false;
+    document.getElementById('create-player-box').classList.add('hidden');
+    document.querySelector('#toggle-create-player-btn i').className = 'fa-solid fa-plus';
 
-        async function createPlayer() {
-            const first_name = document.getElementById('player-first-name').value.trim();
-            const last_name = document.getElementById('player-last-name').value.trim();
-            const role = document.getElementById('player-role').value;
-            const rating = document.getElementById('player-rating').value;
-            const shirt_number = document.getElementById('player-shirt-number').value;
-            const team_id = document.getElementById('player-team').value;
-            const photo = document.getElementById('player-photo').files[0];
+    await loadPage();
+  }
 
-            if (!first_name || !last_name || !role || !rating || !shirt_number) {
-                alert('Compila tutti i campi obbligatori');
-                return;
-            }
+  function resetCreatePlayerForm() {
+    document.getElementById('player-first-name').value  = '';
+    document.getElementById('player-last-name').value   = '';
+    document.getElementById('player-role').value        = 'POR';
+    document.getElementById('player-rating').value      = '1';
+    document.getElementById('player-shirt-number').value = '';
+    document.getElementById('player-team').value        = '';
+    document.getElementById('player-photo').value       = '';
+    updateSelectedTeamLogo();
+  }
 
-            const formData = new FormData();
+  /* ── Render players list ───────────────────────────────────── */
+  function renderPlayers() {
+    const container = document.getElementById('players-container');
 
-            formData.append('first_name', first_name);
-            formData.append('last_name', last_name);
-            formData.append('role', role);
-            formData.append('rating', rating);
-            formData.append('shirt_number', shirt_number);
+    if (!players.length) {
+      container.innerHTML = '<p>Nessun giocatore disponibile.</p>';
+      return;
+    }
 
-            if (team_id) {
-                formData.append('team_id', team_id);
-            }
+    const teamOptionsHtml = `
+      <option value="">Nessuna squadra</option>
+      ${teams.map(t => `<option value="${t.id}">${formatTeamName(t.name)}</option>`).join('')}
+    `;
 
-            if (photo) {
-                formData.append('photo', photo);
-            }
+    const roleOptionsHtml = (current) => ['POR','DIF','CEN','ATT','PRE'].map(r =>
+      `<option value="${r}" ${r === current ? 'selected' : ''}>${roleLabel(r)}</option>`
+    ).join('');
 
-            const res = await fetch('/players', {
-                method: 'POST',
-                body: formData
-            });
+    const ratingOptionsHtml = (current) => [1,2,3,4,5].map(v =>
+      `<option value="${v}" ${v == current ? 'selected' : ''}>${v} ${'⭐'.repeat(v)}</option>`
+    ).join('');
 
-            const data = await res.json().catch(() => ({}));
+    container.innerHTML = players.map(player => `
+      <div class="player" id="player-row-${player.id}">
 
-            if (!res.ok) {
-                alert(data.error || 'Errore creazione giocatore');
-                return;
-            }
+        <!-- ── Summary row ──────────────────────────────────── -->
+        <span class="player-link" onclick="goToPlayer(${player.id})">
+          <img
+            src="/assets/img/players/${player.id}.png"
+            onerror="this.style.display='none'"
+            style="width:34px; height:34px; border-radius:50%; object-fit:cover; margin-right:8px;"
+          >
+          ${player.role !== 'PRE'
+            ? `<span class="shirt-badge">
+                 <i class="fa-solid fa-shirt"></i>
+                 <span class="shirt-number">${player.shirt_number}</span>
+               </span>`
+            : ''}
+          ${formatPlayerName(player)}
+        </span>
 
-            resetCreatePlayerForm();
+        <span>${roleLabel(player.role)}</span>
 
-            createPlayerMode = false;
-            document.getElementById('create-player-box').classList.add('hidden');
-            document.querySelector('#toggle-create-player-btn i').className = 'fa-solid fa-plus';
 
-            await loadPage();
-        }
+        ${logged ?
+            `<span class="player-rating stars">${renderStars(player.rating)}</span>`
+        : ''}
 
-        function resetCreatePlayerForm() {
-            document.getElementById('player-first-name').value = '';
-            document.getElementById('player-last-name').value = '';
-            document.getElementById('player-role').value = 'POR';
-            document.getElementById('player-rating').value = '1';
-            document.getElementById('player-shirt-number').value = '';
-            document.getElementById('player-team').value = '';
-            document.getElementById('player-photo').value = '';
-            updateSelectedTeamLogo();
-        }
 
-        function renderPlayers() {
-            const container = document.getElementById('players-container');
+        ${player.team_name
+          ? `<span style="display:flex; align-items:center; gap:6px;">
+               <img src="${getTeamLogo(player.team_name)}" onerror="this.style.display='none'"
+                    style="width:24px; height:24px; object-fit:contain;">
+               ${formatTeamName(player.team_name)}
+             </span>`
+          : `<span>Nessuna squadra</span>`}
 
-            if (!players.length) {
-                container.innerHTML = '<p>Nessun giocatore disponibile.</p>';
-                return;
-            }
+        ${logged
+          ? `<span class="player-actions">
+               <button
+                 class="btn-edit-player"
+                 id="edit-btn-${player.id}"
+                 title="Modifica"
+                 onclick="toggleEditPanel(${player.id}, event)">
+                 <i class="fa-solid fa-pencil"></i>
+               </button>
+             </span>`
+          : ''}
 
-            container.innerHTML = players.map(player => `
-                <div class="player">
-                <span class="player-link" onclick="goToPlayer(${player.id})">
-                    <img
-                    src="/assets/img/players/${player.id}.png"
-                    onerror="this.style.display='none'"
-                    style="width:34px; height:34px; border-radius:50%; object-fit:cover; margin-right:8px;"
-                    >
+        <!-- ── Inline edit panel ─────────────────────────────── -->
+        ${logged ? `
+        <div class="player-edit-panel" id="edit-panel-${player.id}">
+          <div class="edit-grid">
 
-                    ${
-                    player.role !== 'PRE'
-                    ? `
-                    <span class="shirt-badge">
-                        <i class="fa-solid fa-shirt"></i>
-                        <span class="shirt-number">${player.shirt_number}</span>
-                    </span>
-                    `
-                    : ''
-                    }
+            <div class="edit-field">
+              <label>Nome <span style="color:#e05252">*</span></label>
+              <input id="ep-first_name-${player.id}" type="text" value="${player.first_name}" placeholder="Nome">
+              <span class="field-error" id="ep-err-first_name-${player.id}">Campo obbligatorio</span>
+            </div>
 
-                    ${formatPlayerName(player)}
-                </span>
+            <div class="edit-field">
+              <label>Cognome <span style="color:#e05252">*</span></label>
+              <input id="ep-last_name-${player.id}" type="text" value="${player.last_name}" placeholder="Cognome">
+              <span class="field-error" id="ep-err-last_name-${player.id}">Campo obbligatorio</span>
+            </div>
 
-                <span>${roleLabel(player.role)}</span>
+            <div class="edit-field">
+              <label>Ruolo <span style="color:#e05252">*</span></label>
+              <select id="ep-role-${player.id}" onchange="onEditRoleChange(${player.id})">
+                ${roleOptionsHtml(player.role)}
+              </select>
+            </div>
 
-                <span class="player-rating stars">
-                    ${renderStars(player.rating)}
-                </span>
+            <div class="edit-field field-shirt-wrap" id="ep-shirt-wrap-${player.id}">
+              <label>N° maglia <span style="color:#e05252">*</span></label>
+              <input id="ep-shirt_number-${player.id}" type="number" min="1" max="99"
+                     value="${player.shirt_number || ''}" placeholder="1–99">
+              <span class="field-error" id="ep-err-shirt_number-${player.id}">Numero non valido (1–99)</span>
+            </div>
 
-                ${
-                    player.team_name
-                    ? `
-                    <span style="display:flex; align-items:center; gap:6px;">
-                    <img src="${getTeamLogo(player.team_name)}" onerror="this.style.display='none'" style="width:24px; height:24px; object-fit:contain;">
-                    ${formatTeamName(player.team_name)}
-                    </span>
-                    `
-                    : `<span>Nessuna squadra</span>`
-                }
-                </div>
-            `).join('');
-        }
+            <div class="edit-field">
+              <label>Squadra</label>
+              <select id="ep-team-${player.id}">
+                ${teamOptionsHtml.replace(
+                  `value="${player.team_id}"`,
+                  `value="${player.team_id}" selected`
+                )}
+              </select>
+            </div>
 
-        function renderStars(rating) {
-            const value = Number(rating || 0);
+            <div class="edit-field">
+              <label>Rating (1–5)</label>
+              <select id="ep-rating-${player.id}">
+                ${ratingOptionsHtml(player.rating)}
+              </select>
+            </div>
 
-            return Array.from({ length: value })
-                .map(() => `<i class="fa-solid fa-star"></i>`)
-                .join('');
-        }
+          </div>
 
-        function roleLabel(role) {
-            switch (role) {
-                case 'POR': return 'Portiere';
-                case 'DIF': return 'Difensore';
-                case 'CEN': return 'Centrocampista';
-                case 'ATT': return 'Attaccante';
-                case 'PRE': return 'Presidente';
-                default: return role;
-            }
-        }
+          <div class="edit-panel-actions">
+            <button class="btn-save-player" id="ep-save-${player.id}"
+                    onclick="savePlayerInline(${player.id})">
+              <i class="fa-solid fa-check"></i> Salva
+            </button>
+            <button class="btn-cancel-player"
+                    onclick="toggleEditPanel(${player.id})">
+              Annulla
+            </button>
+            <span class="panel-feedback" id="ep-feedback-${player.id}"></span>
+          </div>
+        </div>
+        ` : ''}
 
-        function formatPlayerName(player) {
-            return `${player.first_name || ''} ${player.last_name || ''}`.trim();
-        }
+      </div>
+    `).join('');
 
-        function formatTeamName(name) {
-            if (!name) return '';
+    /* Init shirt visibility for each player */
+    if (logged) players.forEach(p => onEditRoleChange(p.id));
+  }
 
-            return name
-                .split(' ')
-                .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                .join(' ');
-        }
+  /* ── Toggle edit panel ─────────────────────────────────────── */
+  function toggleEditPanel(id, event) {
+    if (event) event.stopPropagation();
 
-        function getTeamLogo(name) {
-            if (!name) return '';
+    const panel = document.getElementById(`edit-panel-${id}`);
+    const btn   = document.getElementById(`edit-btn-${id}`);
+    if (!panel) return;
 
-            return `/assets/img/teams/${String(name)
-                .toLowerCase()
-                .trim()
-                .replace(/\s+/g, '_')}_logo.png`;
-        }
+    const isOpen = panel.classList.toggle('open');
+    btn.classList.toggle('active', isOpen);
 
-        function goToPlayer(id) {
-            window.location.href = `player.html?id=${id}`;
-        }
+    /* Reset feedback when closing */
+    if (!isOpen) clearPanelFeedback(id);
+  }
 
-        (async () => {
-            await checkAuth();
-            await loadPage();
-        })();
+  /* ── Show/hide shirt field based on role ───────────────────── */
+  function onEditRoleChange(id) {
+    const role = document.getElementById(`ep-role-${id}`);
+    const wrap = document.getElementById(`ep-shirt-wrap-${id}`);
+    if (!role || !wrap) return;
+    wrap.classList.toggle('hidden', role.value === 'PRE');
+  }
+
+  /* ── Validate panel fields ─────────────────────────────────── */
+  function validatePanel(id) {
+    let valid = true;
+
+    const required = [
+      { field: `ep-first_name-${id}`,  err: `ep-err-first_name-${id}`,  check: v => v.trim() !== '' },
+      { field: `ep-last_name-${id}`,   err: `ep-err-last_name-${id}`,   check: v => v.trim() !== '' }
+    ];
+
+    required.forEach(({ field, err, check }) => {
+      const el  = document.getElementById(field);
+      const eel = document.getElementById(err);
+      if (!el) return;
+      const ok = check(el.value);
+      el.classList.toggle('invalid', !ok);
+      eel.classList.toggle('visible', !ok);
+      if (!ok) valid = false;
+    });
+
+    /* Shirt: required unless PRE */
+    const role  = document.getElementById(`ep-role-${id}`);
+    const shirt = document.getElementById(`ep-shirt_number-${id}`);
+    const sErr  = document.getElementById(`ep-err-shirt_number-${id}`);
+    if (role && shirt && role.value !== 'PRE') {
+      const v  = Number(shirt.value);
+      const ok = shirt.value !== '' && Number.isInteger(v) && v >= 1 && v <= 99;
+      shirt.classList.toggle('invalid', !ok);
+      sErr.classList.toggle('visible', !ok);
+      if (!ok) valid = false;
+    }
+
+    return valid;
+  }
+
+  function clearPanelFeedback(id) {
+    const fb = document.getElementById(`ep-feedback-${id}`);
+    if (fb) { fb.textContent = ''; fb.className = 'panel-feedback'; }
+    [`ep-first_name-${id}`, `ep-last_name-${id}`, `ep-shirt_number-${id}`].forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.classList.remove('invalid');
+    });
+    document.querySelectorAll(`#edit-panel-${id} .field-error.visible`)
+      .forEach(el => el.classList.remove('visible'));
+  }
+
+  /* ── Save inline ───────────────────────────────────────────── */
+  async function savePlayerInline(id) {
+    if (!validatePanel(id)) return;
+
+    const saveBtn  = document.getElementById(`ep-save-${id}`);
+    const feedback = document.getElementById(`ep-feedback-${id}`);
+    saveBtn.disabled = true;
+    feedback.className = 'panel-feedback';
+
+    const role = document.getElementById(`ep-role-${id}`).value;
+
+    const body = {
+      first_name:   document.getElementById(`ep-first_name-${id}`).value.trim(),
+      last_name:    document.getElementById(`ep-last_name-${id}`).value.trim(),
+      role,
+      team_id:      document.getElementById(`ep-team-${id}`).value || null,
+      rating:       document.getElementById(`ep-rating-${id}`).value,
+      shirt_number: role !== 'PRE'
+                      ? (document.getElementById(`ep-shirt_number-${id}`).value || null)
+                      : null
+    };
+
+    try {
+      const res = await fetch(`/players/${id}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Errore salvataggio');
+      }
+
+      feedback.textContent = '✓ Salvato';
+      feedback.className   = 'panel-feedback ok';
+
+      setTimeout(async () => {
+        await loadPage();          /* re-render the list with updated data */
+      }, 700);
+
+    } catch (err) {
+      feedback.textContent = `✗ ${err.message}`;
+      feedback.className   = 'panel-feedback error';
+      saveBtn.disabled = false;
+    }
+  }
+
+  /* ── Helpers ───────────────────────────────────────────────── */
+  function renderStars(rating) {
+    return Array.from({ length: Number(rating || 0) })
+      .map(() => `<i class="fa-solid fa-star"></i>`)
+      .join('');
+  }
+
+  function roleLabel(role) {
+    return { POR:'Portiere', DIF:'Difensore', CEN:'Centrocampista',
+             ATT:'Attaccante', PRE:'Presidente' }[role] || role;
+  }
+
+  function formatPlayerName(p) {
+    return `${p.first_name || ''} ${p.last_name || ''}`.trim();
+  }
+
+  function formatTeamName(name) {
+    if (!name) return '';
+    return name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  }
+
+  function getTeamLogo(name) {
+    if (!name) return '';
+    return `/assets/img/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
+  }
+
+  function goToPlayer(id) {
+    window.location.href = `player.html?id=${id}`;
+  }
+
+  /* ── Boot ──────────────────────────────────────────────────── */
+  (async () => {
+    await checkAuth();
+    await loadPage();
+  })();
 </script>
 
 </body>

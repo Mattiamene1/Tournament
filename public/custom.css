@@ -1496,6 +1496,197 @@ h3 {
 }
 
 /* =========================
+   PLAYER INLINE EDIT
+========================= */
+
+/* Pencil toggle button (players.html list + player.html card) */
+.btn-edit-player,
+.edit-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.4;
+  font-size: 0.8rem;
+  padding: 4px 7px;
+  border-radius: 6px;
+  transition: opacity .18s, background .18s;
+  line-height: 1;
+  vertical-align: middle;
+}
+.btn-edit-player:hover,
+.edit-toggle-btn:hover  { opacity: 1; background: rgba(255,255,255,.1); }
+.btn-edit-player.active,
+.edit-toggle-btn.active { opacity: 1; color: #4caf82; }
+
+/* ── players.html: panel sits below the row, spanning all columns ── */
+#players-container .player {
+  /* switch to block-level wrapper so the panel can span full width */
+  display: grid;
+  grid-template-columns: 35% 20% 20% 20% 5%;
+  align-items: center;
+}
+
+/* The edit panel is a full-width child that breaks out of the grid */
+.player-edit-panel {
+  display: none;
+  grid-column: 1 / -1;        /* span all columns */
+  padding: 14px 16px 16px;
+  background: rgba(255,255,255,.04);
+  border-top: 1px solid rgba(255,255,255,.08);
+  margin-top: 4px;
+  animation: panelIn .2s ease;
+}
+.player-edit-panel.open { display: block; }
+
+/* ── player.html: panel inside the card ── */
+.edit-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.15);
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  animation: panelIn .25s ease;
+}
+.edit-section.open { display: flex; }
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.edit-section h3 {
+  margin: 0 0 4px;
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  opacity: .55;
+  color: inherit;
+}
+
+/* Shared grid layout for both panels */
+.edit-grid,
+.edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 130px;
+}
+
+.edit-field label {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  opacity: .6;
+  color: inherit;
+  font-weight: normal;
+}
+
+.edit-field input,
+.edit-field select {
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.07);
+  color: inherit;
+  font-size: .9rem;
+  transition: border-color .18s, background .18s;
+  width: 100%;
+  box-sizing: border-box;
+  /* override .admin-box rules that might bleed in */
+  border-radius: 7px !important;
+  padding: 7px 9px !important;
+}
+.edit-field input:focus,
+.edit-field select:focus {
+  outline: none;
+  border-color: rgba(255,255,255,.45) !important;
+  background: rgba(255,255,255,.11);
+}
+.edit-field select option { background: #1a1a2e; color: #fff; }
+
+.edit-field input.invalid,
+.edit-field select.invalid { border-color: #e05252 !important; }
+
+.field-error {
+  font-size: .68rem;
+  color: #e05252;
+  display: none;
+}
+.field-error.visible { display: block; }
+
+/* Action row */
+.edit-panel-actions,
+.edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-save-player,
+.btn-save,
+.btn-cancel-player,
+.btn-cancel {
+  padding: 7px 18px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  font-size: .85rem;
+  font-weight: 600;
+  transition: opacity .18s, transform .1s;
+}
+.btn-save-player:active,
+.btn-save:active,
+.btn-cancel-player:active,
+.btn-cancel:active { transform: scale(.97); }
+
+.btn-save-player,
+.btn-save  { background: #4caf82; color: #fff; }
+.btn-save-player:hover,
+.btn-save:hover    { opacity: .85; }
+.btn-save-player:disabled,
+.btn-save:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn-cancel-player,
+.btn-cancel { background: rgba(255,255,255,.1); color: inherit; }
+.btn-cancel-player:hover,
+.btn-cancel:hover  { background: rgba(255,255,255,.18); }
+
+/* Feedback label */
+.panel-feedback,
+.save-feedback {
+  font-size: .82rem;
+  display: none;
+}
+.panel-feedback.ok,
+.save-feedback.ok    { display: inline; color: #4caf82; }
+.panel-feedback.error,
+.save-feedback.error { display: inline; color: #e05252; }
+
+/* Hide shirt field for PRE role */
+.field-shirt-wrap.hidden,
+.field-shirt.hidden { display: none !important; }
+
+/* players.html: pencil column — narrow, right-aligned */
+#players-container .player-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-left: 0;
+  grid-template-columns: unset; /* reset team-page override */
+}
+
+/* =========================
    MOBILE
 ========================= */
 @media (max-width: 768px) {
@@ -1566,7 +1757,7 @@ h3 {
   }
 
   #players-container .player {
-    grid-template-columns: 35% 20% 20% 25%;
+    grid-template-columns: 35% 20% 20% 20% 5%;
     font-size: 14px;
     gap: 6px;
     padding: 12px 0;
@@ -1604,38 +1795,30 @@ h3 {
 
   /* Player detail mobile layout */
   .player-meta {
-  margin-top: 16px;
-
-  display: grid;
-
-  grid-template-columns: 70% 30%;
-
-  align-items: center;
-
-  column-gap: 18px;
-}
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: 70% 30%;
+    align-items: center;
+    column-gap: 18px;
+  }
 
   .player-meta .team-box {
     margin: 0;
-
     display: flex;
     align-items: center;
     gap: 12px;
-
     min-width: 0;
   }
 
   .player-meta .team-box img {
     width: 56px;
     height: 56px;
-
     flex: 0 0 56px;
   }
 
   .player-meta .team-box span {
     font-size: 18px;
     font-weight: bold;
-
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1643,23 +1826,19 @@ h3 {
 
   .player-meta .player-info {
     margin: 0;
-
     display: flex;
     flex-direction: column;
     gap: 8px;
-
     align-items: stretch;
     text-align: left;
   }
 
   .player-meta .player-info p {
     margin: 0;
-
     display: grid;
     grid-template-columns: 92px 1fr;
     align-items: center;
     column-gap: 8px;
-
     font-size: 18px;
   }
 
@@ -1679,7 +1858,7 @@ h3 {
     text-align: left;
     white-space: nowrap;
   }
-  
+
   .player-rating i,
   .stars i {
     font-size: 11px;
@@ -1858,4 +2037,27 @@ h3 {
     padding: 20px;
   }
 
+  /* Inline edit — mobile */
+  .edit-grid,
+  .edit-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .edit-field {
+    flex: 1 1 100%;
+  }
+
+  .edit-panel-actions,
+  .edit-actions {
+    flex-wrap: wrap;
+  }
+
+  .btn-save-player,
+  .btn-save,
+  .btn-cancel-player,
+  .btn-cancel {
+    flex: 1 1 auto;
+    text-align: center;
+  }
 }
