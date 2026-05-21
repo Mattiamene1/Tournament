@@ -277,21 +277,72 @@ INSERT INTO players (first_name, last_name, role, rating, team_id) VALUES
 ('Alvise', 'Magli', 'ATT', 5, 6);
 
 /* =========================
-   MATCHES - GIRONE A
+   GIRONI
 ========================= */
-INSERT INTO matches (group_id, home_team_id, away_team_id, match_date, pitch_id, referee_id, status) VALUES
-(1, 1, 2, '2026-04-24 18:00:00', 1, 1, 'scheduled'),
-(1, 2, 3, '2026-04-24 19:00:00', 1, 1, 'scheduled'),
-(1, 3, 1, '2026-04-24 20:00:00', 1, 1, 'scheduled');
+
+INSERT INTO tournament_groups (group_id, team_id) VALUES
+(1, 'Girone A'),
+(2, 'Girone B'),
 
 /* =========================
-   MATCHES - GIRONE B
+   GROUP ASSIGNMENT
 ========================= */
-INSERT INTO matches (group_id, home_team_id, away_team_id, match_date, pitch_id, referee_id, status) VALUES
-(2, 4, 5, '2026-04-24 18:30:00', 1, 1, 'scheduled'),
-(2, 5, 6, '2026-04-24 19:30:00', 1, 1, 'scheduled'),
-(2, 6, 4, '2026-04-24 20:30:00', 1, 1, 'scheduled');
+INSERT INTO group_teams (group_id, team_id) VALUES
+(1, 1),
+(1, 2),
+(1, 3),
+(1, 4),
+(2, 5),
+(2, 6),
+(2, 7),
+(2, 8);
 
 /* =========================
-   EVENTI - PARTITA 4
+   PITCHES
 ========================= */
+INSERT INTO pitches (name) VALUES
+('Campo 1'),
+('Campo 2');
+
+/* =========================
+   REFEREES
+========================= */
+INSERT INTO referees (first_name, last_name) VALUES
+('Maguette', 'Ba');
+
+/* =========================
+   MATCHES
+========================= */
+INSERT INTO matches (
+    group_id,
+    home_team_id,
+    away_team_id,
+    match_date,
+    pitch_id,
+    referee_id,
+    status,
+    phase,
+    home_score,
+    away_score,
+    started_at,
+    ended_at
+) VALUES
+-- Gruppo A - Venerdì
+(1, 1, 2, '2026-05-22 18:00:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+(1, 3, 4, '2026-05-22 19:00:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+(1, 2, 3, '2026-05-22 20:00:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+(1, 4, 1, '2026-05-22 21:00:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+
+-- Gruppo B - Venerdì
+(2, 5, 6, '2026-05-22 18:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+(2, 7, 8, '2026-05-22 19:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+(2, 6, 7, '2026-05-22 20:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+(2, 8, 5, '2026-05-22 21:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+
+-- Gruppo A - Sabato
+(1, 2, 4, '2026-05-23 09:00:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+(1, 1, 3, '2026-05-23 10:00:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+
+-- Gruppo B - Sabato
+(2, 5, 7, '2026-05-23 08:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
+(2, 6, 8, '2026-05-23 09:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL);

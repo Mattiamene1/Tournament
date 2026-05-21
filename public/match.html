@@ -22,8 +22,7 @@
     </a>
   </div>
 
-    <nav>
-    <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
+  <nav>
     <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
     <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
     <a href="players.html"><i class="fa-solid fa-user"></i> Giocatori</a>
@@ -150,12 +149,18 @@ function renderMatch(events) {
       <div class="match-teams">
 
         <div class="team">
-          ${
-            matchData.home_team_name
-            ? `<img src="${getTeamLogo(matchData.home_team_name)}" onerror="this.onerror=null; this.style.display='none';">`
-            : ''
-          }
-          <span>${formatTeamName(matchData.home_team_name)}</span>
+          <span
+            class="team-link"
+            onclick="goToTeam(${matchData.home_team_id})"
+          >
+            ${matchData.home_team_name ? `
+              <img
+                src="${getTeamLogo(matchData.home_team_name)}"
+                onerror="this.onerror=null; this.style.display='none';"
+              >
+            ` : ''}
+            <span><strong>${formatTeamName(matchData.home_team_name)}</strong></span>
+          </span>
         </div>
 
         <div class="vs">
@@ -163,12 +168,18 @@ function renderMatch(events) {
         </div>
 
         <div class="team">
-          <span>${formatTeamName(matchData.away_team_name)}</span>
-          ${
-            matchData.away_team_name
-            ? `<img src="${getTeamLogo(matchData.away_team_name)}" onerror="this.onerror=null; this.style.display='none';">`
-            : ''
-          }
+          <span
+            class="team-link"
+            onclick="goToTeam(${matchData.away_team_id})"
+          >
+            <span><strong>${formatTeamName(matchData.away_team_name)}</strong></span>
+            ${matchData.away_team_name ? `
+              <img
+                src="${getTeamLogo(matchData.away_team_name)}"
+                onerror="this.onerror=null; this.style.display='none';"
+              >
+            ` : ''}
+          </span>
         </div>
 
       </div>
@@ -289,14 +300,27 @@ function renderEvents(events) {
   return events.map(e => {
     const isHome = String(e.team_id) === String(matchData.home_team_id);
     const sideClass = isHome ? 'home-event' : 'away-event';
+    const playerName = e.player_name || formatEventPlayerName(e);
+    const playerId   = e.player_id;
 
     return `
       <div class="event-row ${sideClass}">
         <div class="event-minute">${e.minute}'</div>
         <div class="event-icon">${eventIcon(e.event_type)}</div>
         <div class="event-content">
-          <strong>${e.player_name || formatEventPlayerName(e)}</strong>
+          <strong
+            ${playerId ? `class="event-player-link" onclick="goToPlayer(${playerId})"` : ''}
+          >${playerName}</strong>
           <span class="event-label">${eventLabel(e)}</span>
+          ${e.assist_player_id ? `
+            <span class="event-assist">
+              🅰️
+              <span
+                class="event-player-link"
+                onclick="goToPlayer(${e.assist_player_id})"
+              >${e.assist_player_name || ''}</span>
+            </span>
+          ` : ''}
         </div>
       </div>
     `;
@@ -555,6 +579,14 @@ function getTeamLogo(name) {
   }
 
   return `/assets/img/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
+}
+
+function goToPlayer(id) {
+  window.location.href = `player.html?id=${id}`;
+}
+
+function goToTeam(id) {
+  window.location.href = `team.html?id=${id}`;
 }
 
 function renderScore(match) {
