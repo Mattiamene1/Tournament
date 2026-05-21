@@ -444,6 +444,7 @@ async function updateMatchDate() {
 }
 
 async function startMatch() {
+  if (!confirm("Iniziare la partita?")) return;
   const res = await fetch(`/matches/${matchId}/start`, {
     method: 'POST'
   });
@@ -459,6 +460,7 @@ async function startMatch() {
 }
 
 async function finishMatch() {
+  if (!confirm("Terminare la partita?")) return;
   const res = await fetch(`/matches/${matchId}/finish`, {
     method: 'POST'
   });

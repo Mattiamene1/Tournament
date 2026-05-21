@@ -131,16 +131,16 @@
                 home.points += 3;
                 away.losses++;
 
-                home.form.push({ result: 'W', matchId: match.id });
-                away.form.push({ result: 'L', matchId: match.id });
+                home.form.push({ result: 'V', matchId: match.id });
+                away.form.push({ result: 'S', matchId: match.id });
 
                 } else if (homeScore < awayScore) {
                 away.wins++;
                 away.points += 3;
                 home.losses++;
 
-                away.form.push({ result: 'W', matchId: match.id });
-                home.form.push({ result: 'L', matchId: match.id });
+                away.form.push({ result: 'V', matchId: match.id });
+                home.form.push({ result: 'S', matchId: match.id });
 
                 } else {
                 home.draws++;
@@ -148,8 +148,8 @@
                 home.points++;
                 away.points++;
 
-                home.form.push({ result: 'D', matchId: match.id });
-                away.form.push({ result: 'D', matchId: match.id });
+                home.form.push({ result: 'P', matchId: match.id });
+                away.form.push({ result: 'P', matchId: match.id });
                 }
             });
 
@@ -223,9 +223,9 @@
             if (!form.length) return '-';
 
             return form.slice(-5).map(item => {
-                const cls = item.result === 'W'
+                const cls = item.result === 'V'
                 ? 'win'
-                : item.result === 'D'
+                : item.result === 'P'
                     ? 'draw'
                     : 'loss';
 

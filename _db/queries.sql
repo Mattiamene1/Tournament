@@ -298,6 +298,16 @@ INSERT INTO group_teams (group_id, team_id) VALUES
 (2, 8);
 
 /* =========================
+   BONUSES
+========================= */
+INSERT INTO bonuses (name, goal_value) VALUES
+('Rigore Bonus',1),
+('Shotout Bonus',1),
+('Rigore Presidenziale',1),
+('Goal Doppio',2),
+('Star Player',2);
+
+/* =========================
    PITCHES
 ========================= */
 INSERT INTO pitches (name) VALUES
