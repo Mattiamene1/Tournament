@@ -1483,6 +1483,14 @@ h3 {
     color: inherit;
 }
 
+.logo-link,
+.logo-link:visited,
+.logo-link:hover,
+.logo-link:active {
+    text-decoration: none;
+    color: inherit;
+}
+
 .logo-link:hover {
     color: inherit;
 }
