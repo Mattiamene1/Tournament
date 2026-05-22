@@ -314,7 +314,7 @@ function renderEvents(events) {
             ${e.assist_player_id ? `
               <div class="tl-assist">
                 🅰️ <span class="event-player-link" onclick="goToPlayer(${e.assist_player_id})">
-                  ${e.assist_player_name || ''}
+                  ${e.assist_first_name ? `${e.assist_first_name} ${e.assist_last_name}` : ''}
                 </span>
               </div>` : ''}
           </div>

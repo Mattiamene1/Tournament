@@ -100,56 +100,59 @@
 
         async function loadScorers() {
             try {
-                const [eventsRes, playersRes] = await Promise.all([
-                    fetch('/match-events'),
-                    fetch('/players')
+                const [eventsRes, playersRes, teamsRes] = await Promise.all([
+                fetch('/match-events'),
+                fetch('/players'),
+                fetch('/teams')
                 ]);
 
                 const events  = await eventsRes.json();
                 const players = await playersRes.json();
+                const teams   = await teamsRes.json();
 
-                // Conta gol per player_id
                 const scorerMap = {};
 
+                // Gol
                 events.forEach(e => {
-                    if (e.event_type !== 'goal' && e.event_type !== 'bonus') return;
-                    if (!e.player_id) return;
+                if (e.event_type !== 'goal' && e.event_type !== 'bonus') return;
+                if (!e.player_id) return;
 
-                    if (!scorerMap[e.player_id]) {
-                        scorerMap[e.player_id] = { goals: 0, assists: 0 };
-                    }
-                    scorerMap[e.player_id].goals += 1;
+                if (!scorerMap[e.player_id]) {
+                    scorerMap[e.player_id] = { goals: 0, assists: 0 };
+                }
+                scorerMap[e.player_id].goals += 1;
                 });
 
-                // Conta assist
+                // Assist — usa assist_first_name / assist_last_name dal model
                 events.forEach(e => {
-                    if (!e.assist_player_id) return;
+                if (!e.assist_player_id) return;
 
-                    if (!scorerMap[e.assist_player_id]) {
-                        scorerMap[e.assist_player_id] = { goals: 0, assists: 0 };
-                    }
-                    scorerMap[e.assist_player_id].assists += 1;
+                if (!scorerMap[e.assist_player_id]) {
+                    scorerMap[e.assist_player_id] = { goals: 0, assists: 0 };
+                }
+                scorerMap[e.assist_player_id].assists += 1;
                 });
 
                 // Arricchisci con dati giocatore
                 const rows = Object.entries(scorerMap)
                 .map(([playerId, stats]) => {
                     const p = players.find(pl => String(pl.id) === String(playerId));
+                    const team = p ? teams.find(t => String(t.id) === String(p.team_id)) : null;
                     return {
                     playerId,
                     name:     p ? `${p.first_name} ${p.last_name}` : `#${playerId}`,
-                    teamName: p?.team_name || '',
+                    teamName: team?.name || '',
                     ...stats
                     };
                 })
-                .filter(r => r.goals > 0)
+                .filter(r => r.goals > 0 || r.assists > 0)
                 .sort((a, b) => b.goals - a.goals || b.assists - a.assists);
 
                 const container = document.getElementById('standings-scorers');
 
                 if (!rows.length) {
-                    container.innerHTML = '<p>Nessun marcatore disponibile.</p>';
-                    return;
+                container.innerHTML = '<p>Nessun marcatore disponibile.</p>';
+                return;
                 }
 
                 container.innerHTML = `
