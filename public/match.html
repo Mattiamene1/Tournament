@@ -168,8 +168,8 @@ function renderMatch(events) {
 
       ${matchData.referee ? `
         <div style="margin-top:14px; text-align:center; font-size:14px; opacity:.7; display:flex; align-items:center; justify-content:center; gap:8px;">
-          <img src="/assets/svg/whistle.svg" style="width:18px; height:18px; filter:invert(1); opacity:.7;">
-          <span class="event-player-link" onclick="goToReferee(${matchData.referee.id})" style="font-size:16px;">
+          <img src="/assets/svg/whistle.svg" style="width:25px; height:25px; filter:invert(1); opacity:.7;">
+          <span class="event-player-link tl-player" onclick="goToReferee(${matchData.referee.id})">
             ${matchData.referee.first_name} ${matchData.referee.last_name}
           </span>
         </div>
