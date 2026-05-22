@@ -49,6 +49,9 @@ app.use('/match-events', require('./routes/match_events.routes'));
 // players
 app.use('/players', require('./routes/players.routes'));
 
+// referees
+app.use('/referees', require('./routes/referees.routes'));
+
 // teams
 app.use('/teams', require('./routes/teams.routes'));
 

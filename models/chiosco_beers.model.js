@@ -58,7 +58,7 @@ async function getBeerEvents(filters = {}) {
     params.push(filters.team_id);
   }
 
-  sql += ` ORDER BY cb.created_at DESC`;
+  sql += ` ORDER BY t.name DESC`;
 
   const [rows] = await db.execute(sql, params);
   return rows;
