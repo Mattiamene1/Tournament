@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Classifica</title>
+    <title>Chiosco</title>
 
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
@@ -10,14 +10,11 @@
     <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
 
     <link rel="stylesheet" href="./custom.css">
-
-    <!-- Font Awesome (versione 6+) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
 
-    <!-- NAVBAR -->
     <header class="navbar">
         <div class="logo">
             <a href="/" class="logo-link">
@@ -42,7 +39,16 @@
         <div class="chiosco-countdown-card">
             <div class="chiosco-countdown-title">Tempo rimanente</div>
             <div id="countdown" class="chiosco-countdown">Caricamento...</div>
-            <div class="chiosco-deadline">Scadenza: 30/04/2026 - 22:00</div>
+            <div class="chiosco-deadline" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                Scadenza: <span id="deadline-display">—</span>
+                <button id="deadline-edit-btn" class="match-datetime-edit-toggle" onclick="toggleDeadlineEdit()" style="display:none;">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+            </div>
+            <div id="deadline-edit-box" class="schedule-edit-box" style="display:none; margin-top:12px;">
+                <input class="match-datetime-input" id="deadline-input" type="datetime-local">
+                <button class="match-datetime-button" onclick="saveDeadline()">Salva</button>
+            </div>
         </div>
 
         <div id="chiosco-container">
@@ -53,42 +59,49 @@
 
     <script>
 
+        let logged = false;
+        let deadline = new Date('2026-07-04T20:00:00');
+
+        let originalBeers = {};
+        let pendingBeers  = {};
+        let teamsCache    = [];
+        let sortedOrder   = [];
+        let countdownInterval = null;
+
         async function checkAuth() {
             try {
-                const res = await fetch('/me');
+                const res  = await fetch('/me');
                 const data = await res.json();
-
                 logged = data.logged;
+
+                if (logged) {
+                    document.getElementById('deadline-edit-btn').style.display = 'inline-flex';
+                }
             } catch (err) {
                 console.error('Errore verifica login', err);
                 logged = false;
             }
         }
 
-        const deadline = new Date('2026-07-04T20:00:00');
-
-        let originalBeers = {};
-        let pendingBeers = {};
-        let teamsCache = [];
-        let sortedOrder = [];
-        let countdownInterval = null;
-
         async function loadChiosco() {
-
             try {
-                const res = await fetch('/chiosco-beers/standings');
+                const res   = await fetch('/chiosco-beers/standings');
                 const teams = await res.json();
 
                 teamsCache = teams;
 
                 teams.forEach(team => {
-                originalBeers[team.id] = Number(team.beers || 0);
-                pendingBeers[team.id] = Number(team.beers || 0);
+                    originalBeers[team.id] = Number(team.beers || 0);
+                    pendingBeers[team.id]  = Number(team.beers || 0);
                 });
 
                 sortedOrder = [...teams].sort(
                     (a, b) => Number(b.beers || 0) - Number(a.beers || 0)
                 );
+
+                document.getElementById('deadline-display').textContent =
+                    deadline.toLocaleDateString('it-IT') + ' - ' +
+                    deadline.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 
                 renderChiosco();
                 startCountdown();
@@ -96,7 +109,7 @@
             } catch (err) {
                 console.error(err);
                 document.getElementById('chiosco-container').innerHTML =
-                '<p style="color:red;">Errore nel caricamento Coppa Chiosco</p>';
+                    '<p style="color:red;">Errore nel caricamento Coppa Chiosco</p>';
             }
         }
 
@@ -112,48 +125,43 @@
             container.innerHTML = `
                 <div class="chiosco-list">
                     ${sortedTeams.map((team, index) => {
-                    const changed = pendingBeers[team.id] !== originalBeers[team.id];
+                        const changed = pendingBeers[team.id] !== originalBeers[team.id];
 
-                    return `
-                        <div class="chiosco-row ${index === 0 ? 'leader' : ''}">
+                        return `
+                            <div class="chiosco-row ${index === 0 ? 'leader' : ''}">
 
-                            <div class="chiosco-position">${index + 1}</div>
+                                <div class="chiosco-position">${index + 1}</div>
 
-                            <div class="chiosco-team clickable" onclick="goToTeam(${team.id})">
-                                <img src="${getTeamLogo(team.name)}" alt="${team.name}">
-                                <span>${formatTeamName(team.name)}</span>
-                            </div>
+                                <div class="chiosco-team clickable" onclick="goToTeam(${team.id})">
+                                    <img src="${getTeamLogo(team.name)}" alt="${team.name}">
+                                    <span>${formatTeamName(team.name)}</span>
+                                </div>
 
-                            ${
-                                logged
-                                ? `<div class="chiosco-controls">
-                                    <button class="chiosco-btn" onclick="event.stopPropagation(); updatePendingBeer(${team.id}, -1)">−</button>
-
-                                    <div class="chiosco-count ${changed ? 'changed' : ''}">
+                                ${logged
+                                    ? `<div class="chiosco-controls">
+                                        <button class="chiosco-btn" onclick="event.stopPropagation(); updatePendingBeer(${team.id}, -1)">−</button>
+                                        <div class="chiosco-count ${changed ? 'changed' : ''}">
+                                            🍺 ${pendingBeers[team.id] || 0}
+                                        </div>
+                                        <button class="chiosco-btn" onclick="event.stopPropagation(); updatePendingBeer(${team.id}, 1)">+</button>
+                                       </div>`
+                                    : `<div class="chiosco-count ${changed ? 'changed' : ''}">
                                         🍺 ${pendingBeers[team.id] || 0}
-                                    </div>
+                                       </div>`
+                                }
 
-                                    <button class="chiosco-btn" onclick="event.stopPropagation(); updatePendingBeer(${team.id}, 1)">+</button>
-                                </div>`
-                                : `<div class="chiosco-count ${changed ? 'changed' : ''}">
-                                    🍺 ${pendingBeers[team.id] || 0}
-                                </div>`
-                            }
-
-                        </div>
-                    `;
+                            </div>
+                        `;
                     }).join('')}
                 </div>
 
-                ${
-                    hasChanges
-                    ? `<div class="chiosco-confirm-box">
+                ${hasChanges ? `
+                    <div class="chiosco-confirm-box">
                         <button class="confirm-btn" onclick="confirmChanges()">Conferma</button>
-                        <button class="cancel-btn" onclick="cancelChanges()">Annulla</button>
-                        </div>`
-                    : ''
-                }
-                `;
+                        <button class="cancel-btn"  onclick="cancelChanges()">Annulla</button>
+                    </div>
+                ` : ''}
+            `;
         }
 
         function updatePendingBeer(teamId, amount) {
@@ -166,20 +174,16 @@
                 const requests = [];
 
                 Object.keys(pendingBeers).forEach(teamId => {
-                const diff = pendingBeers[teamId] - originalBeers[teamId];
-
-                if (diff !== 0) {
-                    requests.push(
-                    fetch('/chiosco-beers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                        team_id: teamId,
-                        quantity: diff
-                        })
-                    })
-                    );
-                }
+                    const diff = pendingBeers[teamId] - originalBeers[teamId];
+                    if (diff !== 0) {
+                        requests.push(
+                            fetch('/chiosco-beers', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ team_id: teamId, quantity: diff })
+                            })
+                        );
+                    }
                 });
 
                 await Promise.all(requests);
@@ -196,25 +200,54 @@
             renderChiosco();
         }
 
+        function toggleDeadlineEdit() {
+            const box    = document.getElementById('deadline-edit-box');
+            const btn    = document.getElementById('deadline-edit-btn');
+            const isOpen = box.style.display === 'flex';
+
+            box.style.display = isOpen ? 'none' : 'flex';
+            btn.innerHTML = isOpen
+                ? '<i class="fa-solid fa-pen"></i>'
+                : '<i class="fa-solid fa-xmark"></i>';
+
+            if (!isOpen) {
+                const d = new Date(deadline);
+                d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                document.getElementById('deadline-input').value = d.toISOString().slice(0, 16);
+            }
+        }
+
+        function saveDeadline() {
+            const val = document.getElementById('deadline-input').value;
+            if (!val) return;
+
+            deadline = new Date(val);
+
+            document.getElementById('deadline-display').textContent =
+                deadline.toLocaleDateString('it-IT') + ' - ' +
+                deadline.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+            toggleDeadlineEdit();
+        }
+
         function startCountdown() {
             updateCountdown();
-
             if (countdownInterval) clearInterval(countdownInterval);
             countdownInterval = setInterval(updateCountdown, 1000);
         }
 
         function updateCountdown() {
-            const now = new Date();
+            const now  = new Date();
             const diff = deadline - now;
-            const el = document.getElementById('countdown');
+            const el   = document.getElementById('countdown');
 
             if (diff <= 0) {
                 el.innerHTML = '🏁 Tempo scaduto';
                 return;
             }
 
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours   = Math.floor((diff / (1000 * 60 * 60)) % 24);
             const minutes = Math.floor((diff / (1000 * 60)) % 60);
             const seconds = Math.floor((diff / 1000) % 60);
 
@@ -231,17 +264,14 @@
 
         function formatTeamName(name) {
             if (!name) return '';
-            return name
-                .split(' ')
-                .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                .join(' ');
+            return name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
         }
 
         (async () => {
             await checkAuth();
             await loadChiosco();
         })();
-        
+
     </script>
 
 </body>
