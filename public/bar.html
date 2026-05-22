@@ -65,14 +65,16 @@
             }
         }
 
-        const deadline = new Date('2026-04-30T22:00:00');
+        const deadline = new Date('2026-07-04T20:00:00');
 
         let originalBeers = {};
         let pendingBeers = {};
         let teamsCache = [];
+        let sortedOrder = [];
         let countdownInterval = null;
 
         async function loadChiosco() {
+
             try {
                 const res = await fetch('/chiosco-beers/standings');
                 const teams = await res.json();
@@ -83,6 +85,10 @@
                 originalBeers[team.id] = Number(team.beers || 0);
                 pendingBeers[team.id] = Number(team.beers || 0);
                 });
+
+                sortedOrder = [...teams].sort(
+                    (a, b) => Number(b.beers || 0) - Number(a.beers || 0)
+                );
 
                 renderChiosco();
                 startCountdown();
@@ -95,9 +101,7 @@
         }
 
         function renderChiosco() {
-            const sortedTeams = [...teamsCache].sort((a, b) => {
-                return Number(pendingBeers[b.id] || 0) - Number(pendingBeers[a.id] || 0);
-            });
+            const sortedTeams = sortedOrder;
 
             const hasChanges = Object.keys(pendingBeers).some(id =>
                 pendingBeers[id] !== originalBeers[id]
