@@ -287,12 +287,13 @@
 
 
         ${player.team_name
-          ? `<span style="display:flex; align-items:center; gap:6px;">
-               <img src="${getTeamLogo(player.team_name)}" onerror="this.style.display='none'"
+          ? `<span class="player-link" onclick="goToTeam(${player.team_id})" style="display:flex; align-items:center; gap:6px;">
+              <img src="${getTeamLogo(player.team_name)}" onerror="this.style.display='none'"
                     style="width:24px; height:24px; object-fit:contain;">
-               ${formatTeamName(player.team_name)}
-             </span>`
-          : `<span>Nessuna squadra</span>`}
+              ${formatTeamName(player.team_name)}
+            </span>`
+          : `<span>Nessuna squadra</span>`
+          }
 
         ${logged
           ? `<span class="player-actions">
@@ -519,9 +520,9 @@
     return `/assets/img/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
   }
 
-  function goToPlayer(id) {
-    window.location.href = `player.html?id=${id}`;
-  }
+  function goToPlayer(id) { window.location.href = `player.html?id=${id}`; }
+
+  function goToTeam(id) { window.location.href = `team.html?id=${id}`; }
 
   /* ── Boot ──────────────────────────────────────────────────── */
   (async () => {

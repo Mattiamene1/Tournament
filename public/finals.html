@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabellone Finale</title>
+
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/img/favicon/favicon-16x16.png">
+  <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
+
+  <link rel="stylesheet" href="./custom.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    /* ── Finals page ─────────────────────────────────── */
+    .finals-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .finals-header h1 { margin: 0; }
+
+    /* Freeze controls */
+    .freeze-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-freeze {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: .2s;
+    }
+    .btn-freeze.frozen  { background: #22c55e; color: #fff; }
+    .btn-freeze.open    { background: #facc15; color: #111827; }
+    .btn-freeze:hover   { opacity: .85; transform: scale(1.02); }
+
+    .btn-simulate {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      background: #334155;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: .2s;
+    }
+    .btn-simulate:hover { background: #475569; transform: scale(1.02); }
+
+    /* ── Bracket layout ──────────────────────────────── */
+    .bracket-wrapper {
+      overflow-x: auto;
+      padding-bottom: 16px;
+    }
+
+    .bracket {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr 60px 220px 60px 1fr 60px 1fr;
+      align-items: center;
+      gap: 0;
+      min-width: 900px;
+    }
+
+    /* Columns by name */
+    .col-sf-left   { display: flex; flex-direction: column; gap: 60px; padding: 0 0 0 0; }
+    .col-conn-l1   { display: flex; flex-direction: column; gap: 60px; align-items: center; }
+    .col-qf-left   { display: flex; flex-direction: column; gap: 0;    align-items: center; }
+    .col-conn-l2   { display: flex; flex-direction: column; gap: 0;    align-items: center; }
+    .col-center    { display: flex; flex-direction: column; gap: 20px; align-items: center; }
+    .col-conn-r2   { display: flex; flex-direction: column; gap: 0;    align-items: center; }
+    .col-qf-right  { display: flex; flex-direction: column; gap: 0;    align-items: center; }
+    .col-conn-r1   { display: flex; flex-direction: column; gap: 60px; align-items: center; }
+    .col-sf-right  { display: flex; flex-direction: column; gap: 60px; }
+
+    /* Match box */
+    .match-box {
+      background: #1e293b;
+      border-radius: 14px;
+      padding: 12px 16px;
+      width: 200px;
+      cursor: pointer;
+      transition: .2s;
+      border: 2px solid transparent;
+      box-shadow: 0 4px 16px rgba(0,0,0,.3);
+      position: relative;
+    }
+    .match-box:hover { border-color: #facc15; transform: scale(1.02); }
+    .match-box.placeholder { opacity: .55; cursor: default; }
+    .match-box.placeholder:hover { border-color: transparent; transform: none; }
+    .match-box.live   { border-color: #ef4444; }
+    .match-box.finished { border-color: #22c55e; }
+
+    .match-box-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      opacity: .5;
+      margin-bottom: 8px;
+    }
+
+    .match-box-team {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      font-size: 13px;
+      font-weight: bold;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .match-box-team:last-child { border-bottom: none; }
+
+    .match-box-team img {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+      background: white;
+      border-radius: 4px;
+      padding: 2px;
+      flex: 0 0 22px;
+    }
+
+    .match-box-team .team-name {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .match-box-team .team-score {
+      font-size: 15px;
+      font-weight: bold;
+      color: #facc15;
+      min-width: 20px;
+      text-align: right;
+    }
+
+    .match-box-team.winner .team-name { color: #facc15; }
+    .match-box-team.placeholder-team  { opacity: .45; font-style: italic; font-weight: normal; }
+
+    /* Center finals */
+    .final-box {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 2px solid #facc15;
+      border-radius: 16px;
+      padding: 14px 18px;
+      width: 210px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(250,204,21,.15);
+    }
+    .final-box .match-box-label { color: #facc15; opacity: 1; font-size: 11px; }
+
+    .third-box {
+      background: #1e293b;
+      border: 2px solid #64748b;
+      border-radius: 16px;
+      padding: 14px 18px;
+      width: 210px;
+      text-align: center;
+    }
+    .third-box .match-box-label { color: #94a3b8; opacity: 1; font-size: 11px; }
+
+    /* Connector SVG lines */
+    .connector { width: 60px; }
+
+    /* Status badge */
+    .match-status-badge {
+      position: absolute;
+      top: 8px; right: 10px;
+      font-size: 9px;
+      font-weight: bold;
+      letter-spacing: .05em;
+      padding: 2px 6px;
+      border-radius: 20px;
+    }
+    .badge-live     { background: #ef4444; color: #fff; }
+    .badge-finished { background: #22c55e; color: #fff; }
+    .badge-scheduled { background: #334155; color: #94a3b8; }
+
+    /* Freeze status banner */
+    .freeze-status {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .freeze-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .freeze-chip.frozen { background: rgba(34,197,94,.15); color: #22c55e; border: 1px solid rgba(34,197,94,.3); }
+    .freeze-chip.open   { background: rgba(250,204,21,.1);  color: #facc15; border: 1px solid rgba(250,204,21,.3); }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .bracket { min-width: 700px; }
+      .match-box, .final-box, .third-box { width: 160px; padding: 10px 12px; }
+      .match-box-team { font-size: 11px; }
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="navbar">
+  <div class="logo">
+    <a href="/" class="logo-link">
+      <img src="/assets/img/wildcard_logo.png" alt="Torneo Wildcard" class="logo-img">
+      <span>WILDCARD</span>
+    </a>
+  </div>
+  <nav>
+    <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
+    <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
+    <a href="players.html"><i class="fa-solid fa-user"></i> Giocatori</a>
+    <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
+    <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <div class="finals-header">
+    <h1>🏆 Tabellone Finale</h1>
+    <div class="freeze-bar" id="freeze-bar">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <div class="freeze-status" id="freeze-status"></div>
+
+  <div class="bracket-wrapper">
+    <div class="bracket" id="bracket">
+      <p style="opacity:.5;">Caricamento tabellone...</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════ */
+let logged       = false;
+let allMatches   = [];
+let allTeams     = [];
+let allGroups    = [];         // [{name, teams: [{id,name,points,...}]}]
+let frozenGroups = {};         // { groupName: [ sorted team objects ] }
+let finalsMatches = [];        // matches with no group_id (finals)
+
+/* slot mapping for 2 groups A/B:
+   SF1 = 2°B vs 3°A   (left)
+   SF2 = 1°A vs 4°B   (left)
+   SF3 = 2°A vs 3°B   (right)
+   SF4 = 1°B vs 4°A   (right)
+*/
+const SF_SLOTS = [
+  { id: 'sf1', label: 'Semifinale 1', side: 'left',  home: {g:1, pos:1}, away: {g:0, pos:2} },  // 2°B vs 3°A  → home=2°B away=3°A
+  { id: 'sf2', label: 'Semifinale 2', side: 'left',  home: {g:0, pos:0}, away: {g:1, pos:3} },  // 1°A vs 4°B
+  { id: 'sf3', label: 'Semifinale 3', side: 'right', home: {g:0, pos:1}, away: {g:1, pos:2} },  // 2°A vs 3°B
+  { id: 'sf4', label: 'Semifinale 4', side: 'right', home: {g:1, pos:0}, away: {g:0, pos:3} },  // 1°B vs 4°A
+];
+
+const FINALS_DATE    = '2026-07-04T14:00:00';
+const FINALS_PITCH   = 1;
+const FINALS_REFEREE = 1;
+
+/* ═══════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════ */
+(async () => {
+  await checkAuth();
+  await loadData();
+  renderFreezeBar();
+  renderFreezeStatus();
+  renderBracket();
+})();
+
+async function checkAuth() {
+  try {
+    const res  = await fetch('/me');
+    const data = await res.json();
+    logged = data.logged;
+  } catch { logged = false; }
+}
+
+async function loadData() {
+  const [matchesRes, teamsRes] = await Promise.all([
+    fetch('/matches'),
+    fetch('/teams')
+  ]);
+  allMatches = await matchesRes.json();
+  allTeams   = await teamsRes.json();
+
+  // Build standings per group
+  allGroups = buildGroupStandings(allTeams, allMatches);
+
+  // Load frozen state from localStorage
+  const saved = localStorage.getItem('wildcard_frozen_groups');
+  if (saved) frozenGroups = JSON.parse(saved);
+
+  // Finals = matches without group_id or with group_name containing 'final'/'semifinal'
+  finalsMatches = allMatches.filter(m =>
+    !m.group_id ||
+    (m.group_name && /final|semi/i.test(m.group_name))
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   STANDINGS BUILDER  (reuse logic from standing.html)
+═══════════════════════════════════════════════════ */
+function buildGroupStandings(teams, matches) {
+  const table = {};
+
+  matches.forEach(m => {
+    const g = m.group_name;
+    if (!g) return;
+
+    if (!table[g]) table[g] = {};
+    ensureTeam(table[g], m.home_team_id, m.home_team_name);
+    ensureTeam(table[g], m.away_team_id, m.away_team_name);
+
+    if (m.status !== 'finished') return;
+
+    const home = table[g][m.home_team_id];
+    const away = table[g][m.away_team_id];
+    const hs = Number(m.home_score || 0);
+    const as = Number(m.away_score || 0);
+
+    home.played++; away.played++;
+    home.goalsFor += hs; home.goalsAgainst += as;
+    away.goalsFor += as; away.goalsAgainst += hs;
+
+    if (hs > as)      { home.wins++; home.points += 3; away.losses++; }
+    else if (hs < as) { away.wins++; away.points += 3; home.losses++; }
+    else              { home.draws++; home.points++; away.draws++; away.points++; }
+  });
+
+  return Object.entries(table).map(([name, teamsObj]) => ({
+    name,
+    teams: Object.values(teamsObj)
+      .map(t => ({ ...t, goalDiff: t.goalsFor - t.goalsAgainst }))
+      .sort((a, b) =>
+        b.points - a.points ||
+        b.goalDiff - a.goalDiff ||
+        b.goalsFor - a.goalsFor
+      )
+  })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function ensureTeam(g, id, name) {
+  if (!g[id]) g[id] = { id, name, played:0, wins:0, draws:0, losses:0, points:0, goalsFor:0, goalsAgainst:0 };
+}
+
+/* ═══════════════════════════════════════════════════
+   GET TEAM FOR SLOT
+   groups sorted alphabetically → index 0 = Girone A, 1 = Girone B
+═══════════════════════════════════════════════════ */
+function getTeamForSlot(groupIdx, pos) {
+  // Use frozen if available, else live standings
+  const groups = allGroups;
+  if (groupIdx >= groups.length) return null;
+
+  const groupName = groups[groupIdx].name;
+  const source    = frozenGroups[groupName] || groups[groupIdx].teams;
+
+  return source[pos] || null;
+}
+
+/* ═══════════════════════════════════════════════════
+   FREEZE / SIMULATE
+═══════════════════════════════════════════════════ */
+function renderFreezeBar() {
+  const bar = document.getElementById('freeze-bar');
+
+  // Simulate button — everyone
+  bar.innerHTML = `
+    <button class="btn-simulate" onclick="simulateBracket()">
+      <i class="fa-solid fa-rotate"></i> Simula Tabellone
+    </button>
+  `;
+
+  if (!logged) return;
+
+  // Freeze buttons per group — admin only
+  allGroups.forEach(g => {
+    const isFrozen = !!frozenGroups[g.name];
+    bar.innerHTML += `
+      <button class="btn-freeze ${isFrozen ? 'frozen' : 'open'}"
+              onclick="toggleFreeze('${g.name}')">
+        <i class="fa-solid fa-${isFrozen ? 'lock' : 'lock-open'}"></i>
+        ${isFrozen ? 'Girone ' + g.name + ' Congelato' : 'Congela Girone ' + g.name}
+      </button>
+    `;
+  });
+}
+
+async function toggleFreeze(groupName) {
+  if (!logged) return;
+
+  if (frozenGroups[groupName]) {
+    // unfreeze
+    delete frozenGroups[groupName];
+    localStorage.setItem('wildcard_frozen_groups', JSON.stringify(frozenGroups));
+    renderFreezeBar();
+    renderFreezeStatus();
+    renderBracket();
+    return;
+  }
+
+  // Freeze: congela la classifica attuale
+  const group = allGroups.find(g => g.name === groupName);
+  if (!group) return;
+
+  frozenGroups[groupName] = group.teams;
+  localStorage.setItem('wildcard_frozen_groups', JSON.stringify(frozenGroups));
+
+  // Crea partite semifinali nel DB per questo congelamento
+  await createSemifinalMatches();
+
+  renderFreezeBar();
+  renderFreezeStatus();
+  await loadData();
+  renderBracket();
+}
+
+async function simulateBracket() {
+  // Reset frozen to live standings (non salva, solo aggiorna la vista)
+  frozenGroups = {};
+  allGroups.forEach(g => { frozenGroups[g.name] = g.teams; });
+  renderFreezeStatus();
+  renderBracket();
+}
+
+function renderFreezeStatus() {
+  const el = document.getElementById('freeze-status');
+
+  el.innerHTML = allGroups.map(g => {
+    const isFrozen = !!frozenGroups[g.name] &&
+      localStorage.getItem('wildcard_frozen_groups') &&
+      JSON.parse(localStorage.getItem('wildcard_frozen_groups'))[g.name];
+
+    return `
+      <span class="freeze-chip ${isFrozen ? 'frozen' : 'open'}">
+        <i class="fa-solid fa-${isFrozen ? 'lock' : 'lock-open'}"></i>
+        Girone ${g.name}: ${isFrozen ? 'Congelato' : 'In corso'}
+      </span>
+    `;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════
+   CREATE SEMIFINAL MATCHES IN DB
+═══════════════════════════════════════════════════ */
+async function createSemifinalMatches() {
+  // Only create if all groups are frozen
+  const allFrozen = allGroups.every(g => frozenGroups[g.name]);
+  if (!allFrozen) return;
+
+  // Check if already created (look for finals matches)
+  const existing = allMatches.filter(m => !m.group_id);
+  if (existing.length >= SF_SLOTS.length) return; // already created
+
+  for (const slot of SF_SLOTS) {
+    const homeTeam = getTeamForSlot(slot.home.g, slot.home.pos);
+    const awayTeam = getTeamForSlot(slot.away.g, slot.away.pos);
+
+    if (!homeTeam || !awayTeam) continue;
+
+    await fetch('/matches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        home_team_id: homeTeam.id,
+        away_team_id: awayTeam.id,
+        match_date:   FINALS_DATE,
+        pitch_id:     FINALS_PITCH,
+        referee_id:   FINALS_REFEREE,
+        status:       'scheduled',
+        group_id:     null
+      })
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   BRACKET RENDER
+═══════════════════════════════════════════════════ */
+function renderBracket() {
+  const bracket = document.getElementById('bracket');
+
+  // Resolve teams for each SF slot
+  const sfTeams = SF_SLOTS.map(slot => ({
+    ...slot,
+    home: getTeamForSlot(slot.home.g, slot.home.pos),
+    away: getTeamForSlot(slot.away.g, slot.away.pos),
+    match: findFinalsMatch(slot)
+  }));
+
+  const sfLeft  = sfTeams.filter(s => s.side === 'left');
+  const sfRight = sfTeams.filter(s => s.side === 'right');
+
+  // Find QF/Final matches (if they exist)
+  const finalMatch     = finalsMatches.find(m => m.round === 'final')     || null;
+  const thirdMatch     = finalsMatches.find(m => m.round === 'third')     || null;
+
+  bracket.innerHTML = `
+    <!-- Left SFs -->
+    <div class="col-sf-left">
+      ${sfLeft.map(sf => renderMatchBox(sf)).join('')}
+    </div>
+
+    <!-- Connectors L1 -->
+    <div class="col-conn-l1">
+      ${sfLeft.map(() => renderConnectorRight()).join('')}
+    </div>
+
+    <!-- QF Left placeholder -->
+    <div class="col-qf-left" style="display:flex; flex-direction:column; gap:20px; justify-content:center; height:100%;">
+      ${renderQFBox('Finale Sinistra', sfLeft[0], sfLeft[1])}
+    </div>
+
+    <!-- Connector L2 -->
+    <div class="col-conn-l2" style="display:flex; align-items:center; justify-content:center;">
+      ${renderConnectorRight()}
+    </div>
+
+    <!-- Center -->
+    <div class="col-center">
+      ${renderCenterBox('🏆 Finale', finalMatch, sfLeft[0], sfLeft[1], sfRight[0], sfRight[1], true)}
+      ${renderCenterBox('🥉 Terzo Posto', thirdMatch, sfLeft[0], sfLeft[1], sfRight[0], sfRight[1], false)}
+    </div>
+
+    <!-- Connector R2 -->
+    <div class="col-conn-r2" style="display:flex; align-items:center; justify-content:center;">
+      ${renderConnectorLeft()}
+    </div>
+
+    <!-- QF Right placeholder -->
+    <div class="col-qf-right" style="display:flex; flex-direction:column; gap:20px; justify-content:center; height:100%;">
+      ${renderQFBox('Finale Destra', sfRight[0], sfRight[1])}
+    </div>
+
+    <!-- Connectors R1 -->
+    <div class="col-conn-r1">
+      ${sfRight.map(() => renderConnectorLeft()).join('')}
+    </div>
+
+    <!-- Right SFs -->
+    <div class="col-sf-right">
+      ${sfRight.map(sf => renderMatchBox(sf)).join('')}
+    </div>
+  `;
+}
+
+function findFinalsMatch(slot) {
+  // Try to match by teams
+  const h = getTeamForSlot(slot.home.g, slot.home.pos);
+  const a = getTeamForSlot(slot.away.g, slot.away.pos);
+  if (!h || !a) return null;
+
+  return finalsMatches.find(m =>
+    (String(m.home_team_id) === String(h.id) && String(m.away_team_id) === String(a.id)) ||
+    (String(m.home_team_id) === String(a.id) && String(m.away_team_id) === String(h.id))
+  ) || null;
+}
+
+function renderMatchBox(sf) {
+  const hasTeams  = sf.home && sf.away;
+  const hasMatch  = sf.match;
+  const isPlaceholder = !hasTeams;
+
+  const status = hasMatch ? sf.match.status : null;
+
+  const homeScore = hasMatch && status !== 'scheduled' ? sf.match.home_score : null;
+  const awayScore = hasMatch && status !== 'scheduled' ? sf.match.away_score : null;
+
+  const homeWinner = homeScore !== null && awayScore !== null && homeScore > awayScore;
+  const awayWinner = homeScore !== null && awayScore !== null && awayScore > homeScore;
+
+  const onclick = hasMatch
+    ? `onclick="window.location.href='match.html?id=${sf.match.id}'"` : '';
+
+  const badge = status
+    ? `<span class="match-status-badge badge-${status}">${status === 'live' ? '🔴 LIVE' : status === 'finished' ? '✅' : '🕒'}</span>`
+    : '';
+
+  const homeTeamHtml = renderTeamRow(
+    sf.home,
+    homeScore,
+    homeWinner,
+    isPlaceholder ? (sf.label + ' - Casa') : null
+  );
+  const awayTeamHtml = renderTeamRow(
+    sf.away,
+    awayScore,
+    awayWinner,
+    isPlaceholder ? (sf.label + ' - Ospite') : null
+  );
+
+  return `
+    <div class="match-box ${isPlaceholder ? 'placeholder' : ''} ${status || ''}" ${onclick}>
+      ${badge}
+      <div class="match-box-label">${sf.label}</div>
+      ${homeTeamHtml}
+      ${awayTeamHtml}
+    </div>
+  `;
+}
+
+function renderTeamRow(team, score, isWinner, placeholderText) {
+  if (!team) {
+    return `<div class="match-box-team placeholder-team">
+      <span class="team-name">${placeholderText || '?'}</span>
+    </div>`;
+  }
+
+  return `
+    <div class="match-box-team ${isWinner ? 'winner' : ''}">
+      <img src="${getTeamLogo(team.name)}" onerror="this.style.display='none'">
+      <span class="team-name">${formatTeamName(team.name)}</span>
+      ${score !== null ? `<span class="team-score">${score}</span>` : ''}
+    </div>
+  `;
+}
+
+function renderQFBox(label, sf1, sf2) {
+  const w1 = getWinner(sf1);
+  const w2 = getWinner(sf2);
+
+  return `
+    <div class="match-box ${!w1 && !w2 ? 'placeholder' : ''}">
+      <div class="match-box-label">${label}</div>
+      ${renderTeamRow(w1, null, false, 'Vincitore ' + (sf1?.label || ''))}
+      ${renderTeamRow(w2, null, false, 'Vincitore ' + (sf2?.label || ''))}
+    </div>
+  `;
+}
+
+function renderCenterBox(label, match, sfL1, sfL2, sfR1, sfR2, isFinal) {
+  const leftWinner  = isFinal ? getWinner(sfL1) || getWinner(sfL2) : getLoser(sfL1) || getLoser(sfL2);
+  const rightWinner = isFinal ? getWinner(sfR1) || getWinner(sfR2) : getLoser(sfR1) || getLoser(sfR2);
+
+  // For final: winner of left QF vs winner of right QF
+  // For third: losers
+  const h = isFinal ? getQFWinner([sfL1, sfL2]) : getQFLoser([sfL1, sfL2]);
+  const a = isFinal ? getQFWinner([sfR1, sfR2]) : getQFLoser([sfR1, sfR2]);
+
+  const hScore = match && match.status !== 'scheduled' ? match.home_score : null;
+  const aScore = match && match.status !== 'scheduled' ? match.away_score : null;
+  const onclick = match ? `onclick="window.location.href='match.html?id=${match.id}'"` : '';
+
+  const boxClass = isFinal ? 'final-box' : 'third-box';
+
+  return `
+    <div class="${boxClass}" style="cursor:${match ? 'pointer' : 'default'}" ${onclick}>
+      <div class="match-box-label">${label}</div>
+      ${renderTeamRow(h, hScore, hScore > aScore && hScore !== null, isFinal ? 'Vincitore Sinistra' : 'Perdente Sinistra')}
+      ${renderTeamRow(a, aScore, aScore > hScore && aScore !== null, isFinal ? 'Vincitore Destra'  : 'Perdente Destra')}
+    </div>
+  `;
+}
+
+/* ── Winner/Loser helpers ── */
+function getWinner(sf) {
+  if (!sf?.match || sf.match.status !== 'finished') return null;
+  const hs = Number(sf.match.home_score);
+  const as = Number(sf.match.away_score);
+  if (hs > as) return sf.home;
+  if (as > hs) return sf.away;
+  return null;
+}
+
+function getLoser(sf) {
+  if (!sf?.match || sf.match.status !== 'finished') return null;
+  const hs = Number(sf.match.home_score);
+  const as = Number(sf.match.away_score);
+  if (hs > as) return sf.away;
+  if (as > hs) return sf.home;
+  return null;
+}
+
+function getQFWinner(sfs) {
+  for (const sf of sfs) {
+    const w = getWinner(sf);
+    if (w) return w;
+  }
+  return null;
+}
+
+function getQFLoser(sfs) {
+  for (const sf of sfs) {
+    const l = getLoser(sf);
+    if (l) return l;
+  }
+  return null;
+}
+
+/* ── SVG connectors ── */
+function renderConnectorRight() {
+  return `
+    <svg class="connector" height="40" viewBox="0 0 60 40" fill="none">
+      <path d="M0 20 H60" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+    </svg>
+  `;
+}
+
+function renderConnectorLeft() {
+  return `
+    <svg class="connector" height="40" viewBox="0 0 60 40" fill="none">
+      <path d="M60 20 H0" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+    </svg>
+  `;
+}
+
+/* ── Utils ── */
+function getTeamLogo(name) {
+  if (!name) return '';
+  return `/assets/img/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
+}
+
+function formatTeamName(name) {
+  if (!name) return '';
+  return name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+</script>
+
+</body>
+</html>

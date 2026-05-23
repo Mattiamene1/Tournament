@@ -38,6 +38,16 @@
         <h1>🏆 Classifiche</h1>
         <div id="standings-container"><p>Caricamento classifiche gironi...</p></div>
 
+        <!-- DOPO -->
+        <h1>🥇 Tabellone Finale</h1>
+            <div id="finals-link">
+            <div class="standing-card" onclick="window.location.href='finals.html'"
+                style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding:20px 24px;">
+                <span style="font-weight:bold; font-size:18px;"> Vai al Tabellone</span>
+                <i class="fa-solid fa-chevron-right" style="color:#facc15; font-size:20px;"></i>
+            </div>
+        </div>
+
         <h1>⚽ Marcatori</h1>
         <div id="standings-scorers"><p>Caricamento classifica marcatori...</p></div>
 
@@ -140,6 +150,7 @@
                     const team = p ? teams.find(t => String(t.id) === String(p.team_id)) : null;
                     return {
                     playerId,
+                    teamId: p?.team_id || null,
                     name:     p ? `${p.first_name} ${p.last_name}` : `#${playerId}`,
                     teamName: team?.name || '',
                     ...stats
@@ -178,11 +189,12 @@
                                 </span>
                             </td>
                             <td>
-                                <div class="standing-team">
-                                ${row.teamName ? `
+                                <div class="standing-team ${row.teamName ? 'clickable' : ''}"
+                                    ${row.teamName ? `onclick="goToTeam(${row.teamId})"` : ''}>
+                                    ${row.teamName ? `
                                     <img src="${getTeamLogo(row.teamName)}" onerror="this.style.display='none'">
                                     <span>${formatTeamName(row.teamName)}</span>
-                                ` : '-'}
+                                    ` : '-'}
                                 </div>
                             </td>
                             <td class="points-col">${row.goals}</td>
