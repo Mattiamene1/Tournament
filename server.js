@@ -56,6 +56,28 @@ app.use('/referees', require('./routes/referees.routes'));
 app.use('/teams', require('./routes/teams.routes'));
 
 
+/// Handle webhook
+app.post('/HD07hVNDe7vAt2oe', (req, res) => {
+    
+    const secret = 'hacktheworld'; // Retrieve this from your environment or conf
+    //const head = req.headers['X-Hub-Signature-256'];
+    const head = req.headers['x-hub-signature-256'];
+    if (!head) {
+        return res.status(400).send('Signature not provided');
+    }
+    if (!verifySignature(secret, head, req)) {
+        return res.status(401).send('Invalid signature');
+    }
+    // If the signature is valid, proceed with processing the webhook payload
+    // Your webhook handling logic goes here
+    res.status(200).send('Webhook received');
+
+    setTimeout(() => {
+        process.exit(111); // Exit with 111 code
+    }, 2000);
+});
+
+
 // start the server
 app.listen(3000, () => {
   const now = new Date();
