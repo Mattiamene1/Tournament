@@ -77,7 +77,6 @@ app.post('/HD07hVNDe7vAt2oe', (req, res) => {
     }, 2000);
 });
 
-
 let encoder = new TextEncoder();
 async function verifySignature(secret, header, payload) {
     let parts = header.split("=");
@@ -107,6 +106,20 @@ async function verifySignature(secret, header, payload) {
     return equal;
 }
 
+function hexToBytes(hex) {
+    let len = hex.length / 2;
+    let bytes = new Uint8Array(len);
+
+    let index = 0;
+    for (let i = 0; i < hex.length; i += 2) {
+        let c = hex.slice(i, i + 2);
+        let b = parseInt(c, 16);
+        bytes[index] = b;
+        index += 1;
+    }
+
+    return bytes;
+}
 
 
 // start the server
