@@ -14,7 +14,7 @@ const upload = multer({ dest: 'uploads/' }); // puoi anche usare memoryStorage
 
 // ****************** LOGIN ***************************/
 app.use(session({
-  secret: 'super-secret-key',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false } // true only with HTTPS
