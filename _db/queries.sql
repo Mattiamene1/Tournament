@@ -1,6 +1,3 @@
-/*
-Queries
-
 /*======================*/
 CREATE TABLE teams (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -357,8 +354,3 @@ INSERT INTO matches (
 -- Gruppo B - Sabato
 (2, 5, 7, '2026-05-23 08:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
 (2, 6, 8, '2026-05-23 09:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL);
-
-
-
-
-*/
