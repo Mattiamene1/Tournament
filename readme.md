@@ -1,4 +1,4 @@
-- npm init -y
+- `npm init -y`
 
 ## Dependencies
 - Axios             `npm install axios`
