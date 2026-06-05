@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -250,10 +250,10 @@
     // Dynamic header + grid based on logged state
     const headerEl = document.getElementById('players-list-header');
     if (logged) {
-      headerEl.style.cssText = 'display:grid;grid-template-columns:35% 20% 20% 20% 5%;gap:10px;padding:8px 0 8px;border-bottom:2px solid #e2e8f0;margin-bottom:4px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;';
-      headerEl.innerHTML = '<span>Giocatore</span><span style="text-align:center">Ruolo</span><span style="text-align:center">Rating</span><span style="text-align:right;padding-right:8%">Squadra</span><span></span>';
-      container.style.setProperty('--player-cols', '35% 20% 20% 20% 5%');
-      container.classList.remove('guest-mode');
+      headerEl.style.cssText = 'display:grid;grid-template-columns:40% 25% 30% 5%;gap:10px;padding:8px 0 8px;border-bottom:2px solid #e2e8f0;margin-bottom:4px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;';
+      headerEl.innerHTML = '<span>Giocatore</span><span style="text-align:center">Ruolo</span><span style="text-align:right;padding-right:4%">Squadra</span><span></span>';
+      container.style.setProperty('--player-cols', '40% 25% 30% 5%');
+      
     } else {
       headerEl.style.cssText = 'display:grid;grid-template-columns:40% 25% 30% 5%;gap:10px;padding:8px 0 8px;border-bottom:2px solid #e2e8f0;margin-bottom:4px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;';
       headerEl.innerHTML = '<span>Giocatore</span><span style="text-align:center">Ruolo</span><span style="text-align:right;padding-right:4%">Squadra</span><span></span>';
@@ -290,22 +290,12 @@
             style="width:34px; height:34px; border-radius:50%; object-fit:cover; margin-right:8px;"
           >
           ${player.role !== 'PRE'
-            ? `<span class="shirt-badge">
-                 <i class="fa-solid fa-shirt"></i>
-                 <span class="shirt-number">${player.shirt_number}</span>
-               </span>`
-            : `<span class="shirt-badge shirt-badge-pre">
-                 <i class="fa-solid fa-shirt" style="color:#facc15;font-size:23px;"></i>
-               </span>`}
+            ? '<span class="shirt-badge"><i class="fa-solid fa-shirt"></i><span class="shirt-number">' + player.shirt_number + '</span></span>'
+            : '<span class="shirt-badge shirt-badge-pre"><i class="fa-solid fa-shirt" style="color:#facc15;font-size:23px;"></i></span>'}
           ${formatPlayerName(player)}
         </span>
 
         <span>${roleLabel(player.role)}</span>
-
-
-        ${logged ?
-            `<span class="player-rating stars">${renderStars(player.rating)}</span>`
-        : ''}
 
 
         ${player.team_name

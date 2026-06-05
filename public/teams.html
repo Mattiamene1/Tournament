@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -294,15 +294,8 @@
                     <span class="player-link" onclick="goToPlayer(${p.id})">
                         ${
                             p.role !== 'PRE'
-                            ? `
-                            <span class="shirt-badge">
-                                <i class="fa-solid fa-shirt"></i>
-                                <span class="shirt-number">${p.shirt_number}</span>
-                            </span>
-                            `
-                            : `<span class="shirt-badge shirt-badge-pre">
-                                <i class="fa-solid fa-shirt" style="color:#facc15;font-size:23px;"></i>
-                               </span>`
+                            ? '<span class="shirt-badge"><i class="fa-solid fa-shirt"></i><span class="shirt-number">' + p.shirt_number + '</span></span>'
+                            : '<span class="shirt-badge shirt-badge-pre"><i class="fa-solid fa-shirt" style="color:#facc15;font-size:23px;"></i></span>'
                         }
                         ${formatPlayerName(p)}
                     </span>
