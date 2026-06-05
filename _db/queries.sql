@@ -1,10 +1,10 @@
-/*======================*/
+/*--------------------------------------*/
 CREATE TABLE teams (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/*======================*/
+/*--------------------------------------*/
 
 CREATE TABLE coaches (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -15,7 +15,7 @@ CREATE TABLE coaches (
         ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/*======================*/
+/*--------------------------------------*/
 
 CREATE TABLE players (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -33,28 +33,28 @@ CREATE TABLE players (
         ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/*======================*/
+/*--------------------------------------*/
 
 CREATE TABLE referees (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/*======================*/
+/*--------------------------------------*/
 
 CREATE TABLE pitches (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/*======================*/
+/*--------------------------------------*/
 
 CREATE TABLE tournament_groups (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/*======================*/
+/*--------------------------------------*/
 
 CREATE TABLE group_teams (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -71,7 +71,7 @@ CREATE TABLE group_teams (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/*======================*/
+/*--------------------------------------*/
 
 CREATE TABLE matches (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -109,7 +109,7 @@ ALTER TABLE matches ADD COLUMN home_score INT DEFAULT 0;
 ALTER TABLE matches ADD COLUMN away_score INT DEFAULT 0;
 ALTER TABLE matches ADD COLUMN started_at DATETIME NULL,
 ALTER TABLE matches ADD COLUMN ended_at DATETIME NULL;
-/*======================*/
+/*--------------------------------------*/
 
 CREATE TABLE bonuses (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -117,7 +117,7 @@ CREATE TABLE bonuses (
     goal_value INT DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/*======================*/
+/*--------------------------------------*/
 CREATE TABLE match_events (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
@@ -163,9 +163,9 @@ CREATE TABLE match_events (
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    /* =========================
+    /* --------------------------------
        FOREIGN KEYS
-    ========================= */
+    -------------------------------- */
 
     CONSTRAINT fk_event_match
         FOREIGN KEY (match_id) REFERENCES matches(id)
@@ -188,7 +188,7 @@ CREATE TABLE match_events (
         ON DELETE SET NULL
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*======================*/
+/*--------------------------------------*/
 
 CREATE TABLE chiosco_beers (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -200,7 +200,7 @@ CREATE TABLE chiosco_beers (
         FOREIGN KEY (team_id) REFERENCES teams(id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*======================*/
+/*--------------------------------------*/
 
 
 -- TEAMS
@@ -274,17 +274,17 @@ INSERT INTO players (first_name, last_name, role, rating, team_id) VALUES
 ('Alessio', 'Visentin', 'DIF', 2, 6),
 ('Alvise', 'Magli', 'ATT', 5, 6);
 
-/* =========================
+/* --------------------------------
    GIRONI
-========================= */
+-------------------------------- */
 
 INSERT INTO tournament_groups (group_id, team_id) VALUES
 (1, 'Girone A'),
 (2, 'Girone B'),
 
-/* =========================
+/* --------------------------------
    GROUP ASSIGNMENT
-========================= */
+-------------------------------- */
 INSERT INTO group_teams (group_id, team_id) VALUES
 (1, 1),
 (1, 2),
@@ -295,9 +295,9 @@ INSERT INTO group_teams (group_id, team_id) VALUES
 (2, 7),
 (2, 8);
 
-/* =========================
+/* --------------------------------
    BONUSES
-========================= */
+-------------------------------- */
 INSERT INTO bonuses (name, goal_value) VALUES
 ('Rigore Bonus',1),
 ('Shotout Bonus',1),
@@ -305,22 +305,22 @@ INSERT INTO bonuses (name, goal_value) VALUES
 ('Goal Doppio',2),
 ('Star Player',2);
 
-/* =========================
+/* --------------------------------
    PITCHES
-========================= */
+-------------------------------- */
 INSERT INTO pitches (name) VALUES
 ('Campo 1'),
 ('Campo 2');
 
-/* =========================
+/* --------------------------------
    REFEREES
-========================= */
+-------------------------------- */
 INSERT INTO referees (first_name, last_name) VALUES
 ('Maguette', 'Ba');
 
-/* =========================
+/* --------------------------------
    MATCHES
-========================= */
+-------------------------------- */
 INSERT INTO matches (
     group_id,
     home_team_id,
