@@ -1,13 +1,13 @@
 /*
 Queries
 
-/***********************************************/
+/*======================*/
 CREATE TABLE teams (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/***********************************************/
+/*======================*/
 
 CREATE TABLE coaches (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -18,7 +18,7 @@ CREATE TABLE coaches (
         ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/***********************************************/
+/*======================*/
 
 CREATE TABLE players (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -36,28 +36,28 @@ CREATE TABLE players (
         ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/***********************************************/
+/*======================*/
 
 CREATE TABLE referees (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/***********************************************/
+/*======================*/
 
 CREATE TABLE pitches (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/***********************************************/
+/*======================*/
 
 CREATE TABLE tournament_groups (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/***********************************************/
+/*======================*/
 
 CREATE TABLE group_teams (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -74,7 +74,7 @@ CREATE TABLE group_teams (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/***********************************************/
+/*======================*/
 
 CREATE TABLE matches (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -112,7 +112,7 @@ ALTER TABLE matches ADD COLUMN home_score INT DEFAULT 0;
 ALTER TABLE matches ADD COLUMN away_score INT DEFAULT 0;
 ALTER TABLE matches ADD COLUMN started_at DATETIME NULL,
 ALTER TABLE matches ADD COLUMN ended_at DATETIME NULL;
-/***********************************************/
+/*======================*/
 
 CREATE TABLE bonuses (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -120,7 +120,7 @@ CREATE TABLE bonuses (
     goal_value INT DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/***********************************************/
+/*======================*/
 CREATE TABLE match_events (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
@@ -191,7 +191,7 @@ CREATE TABLE match_events (
         ON DELETE SET NULL
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/***********************************************/
+/*======================*/
 
 CREATE TABLE chiosco_beers (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -203,7 +203,7 @@ CREATE TABLE chiosco_beers (
         FOREIGN KEY (team_id) REFERENCES teams(id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/***********************************************/
+/*======================*/
 
 
 -- TEAMS
