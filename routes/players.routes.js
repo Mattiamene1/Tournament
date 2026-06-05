@@ -5,7 +5,10 @@ const router = express.Router();
 const controller = require('../controllers/players.controller');
 const { isAuthenticated } = require('../middlewares/auth.middleware');
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 5 * 1024 * 1024 }  // 8 MB
+});
 
 router.post('/',isAuthenticated,upload.single('photo'),controller.createPlayer);
 router.post('/:id/photo',isAuthenticated,upload.single('photo'),controller.uploadPlayerPhoto);      // Update player photo

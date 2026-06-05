@@ -9,10 +9,15 @@ const axios = require('axios');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 
-const upload = multer({ dest: 'uploads/' }); // puoi anche usare memoryStorage
-
+const upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 5 * 1024 * 1024 }  // 8 MB
+});
 
 // ****************** LOGIN ***************************/
+// Serve la cartella "public" per HTML, CSS, JS
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -23,10 +28,6 @@ app.use(session({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // ******************************************************/
-
-
-// Serve la cartella "public" per HTML, CSS, JS
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware to read JSON from body
 app.use(express.json());
