@@ -2,7 +2,12 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={corePlugins:{preflight:false},theme:{extend:{colors:{brand:{yellow:'#facc15',blue:'#1d4ed8',green:'#16a34a',dark:'#0f172a'}}}}}</script>
+    <title>Login — Wildcard</title>
 
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
@@ -10,12 +15,271 @@
     <link rel="manifest" href="./assets/img/favicon/site.webmanifest">
 
     <link rel="stylesheet" href="./custom.css">
-
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+      .login-page-wrap {
+        min-height: calc(100vh - 64px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 16px;
+        background: #f0f2f5;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Decorative background shapes */
+      .login-page-wrap::before {
+        content: '';
+        position: absolute;
+        top: -120px; left: -120px;
+        width: 420px; height: 420px;
+        border-radius: 50%;
+        background: rgba(29,78,216,0.07);
+        pointer-events: none;
+      }
+
+      .login-page-wrap::after {
+        content: '';
+        position: absolute;
+        bottom: -80px; right: -80px;
+        width: 320px; height: 320px;
+        border-radius: 50%;
+        background: rgba(250,204,21,0.1);
+        pointer-events: none;
+      }
+
+      .login-card-wrap {
+        width: 100%;
+        max-width: 440px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .login-brand {
+        text-align: center;
+        margin-bottom: 28px;
+      }
+
+      .login-brand-logo {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        margin: 0 auto 12px;
+        display: block;
+        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+      }
+
+      .login-brand-name {
+        font-size: 28px;
+        font-weight: 900;
+        color: #0f172a;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .login-brand-sub {
+        font-size: 13px;
+        color: #64748b;
+        font-weight: 600;
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .login-card {
+        background: #ffffff;
+        border-radius: 18px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+        padding: 36px 32px 32px;
+      }
+
+      .login-card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 28px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #f1f5f9;
+      }
+
+      .login-card-icon {
+        width: 42px;
+        height: 42px;
+        background: #0f172a;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #facc15;
+        font-size: 18px;
+        flex: 0 0 auto;
+      }
+
+      .login-card-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+
+      .login-card-subtitle {
+        font-size: 13px;
+        color: #64748b;
+        margin: 2px 0 0;
+        font-weight: 500;
+      }
+
+      .login-form-group {
+        margin-bottom: 18px;
+      }
+
+      .login-label {
+        display: block;
+        margin-bottom: 7px;
+        color: #374151;
+        font-weight: 700;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .login-input-wrap {
+        position: relative;
+      }
+
+      .login-input-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 15px;
+        pointer-events: none;
+      }
+
+      .login-input {
+        width: 100%;
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        color: #0f172a;
+        border-radius: 10px;
+        padding: 12px 14px 12px 42px;
+        font-size: 15px;
+        font-family: 'Barlow', sans-serif;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+
+      .login-input:focus {
+        outline: none;
+        border-color: #1d4ed8;
+        box-shadow: 0 0 0 3px rgba(29,78,216,0.1);
+        background: #fff;
+      }
+
+      .login-btn {
+        width: 100%;
+        border: none;
+        border-radius: 10px;
+        padding: 14px;
+        font-size: 15px;
+        font-weight: 800;
+        background: #0f172a;
+        color: #facc15;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        transition: all 0.2s;
+        margin-top: 8px;
+        font-family: 'Barlow', sans-serif;
+      }
+
+      .login-btn:hover {
+        background: #1e293b;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(15,23,42,0.25);
+      }
+
+      .login-btn:active { transform: translateY(0); }
+
+      .login-error {
+        color: #ef4444;
+        font-weight: 700;
+        margin-top: 14px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .logged-area {
+        text-align: center;
+        padding: 20px 0;
+      }
+
+      .logged-check {
+        font-size: 52px;
+        margin-bottom: 12px;
+        display: block;
+      }
+
+      .logged-text {
+        font-size: 18px;
+        font-weight: 700;
+        color: #16a34a;
+        margin-bottom: 20px;
+      }
+
+      .logout-btn {
+        border: none;
+        border-radius: 10px;
+        padding: 12px 28px;
+        font-size: 14px;
+        font-weight: 700;
+        background: #fef2f2;
+        color: #ef4444;
+        border: 1.5px solid #fecaca;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-family: 'Barlow', sans-serif;
+        transition: 0.2s;
+      }
+
+      .logout-btn:hover { background: #fee2e2; }
+
+      /* Decorative pitch lines */
+      .pitch-deco {
+        position: absolute;
+        bottom: 20px; left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 6px;
+        opacity: 0.2;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .pitch-line {
+        width: 3px;
+        height: 40px;
+        background: #0f172a;
+        border-radius: 2px;
+      }
+    </style>
 </head>
 
-<body>
+<body class="bg-slate-50">
 
     <!-- NAVBAR -->
     <header class="navbar">
@@ -27,49 +291,89 @@
         </div>
 
         <nav>
-            <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
-            <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
-            <a href="players.html"><i class="fa-solid fa-user"></i> Giocatori</a>
-            <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
-            <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+            <a href="matches.html"><i class="fa-solid fa-calendar"></i> <span class="nav-label">Partite</span></a>
+            <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> <span class="nav-label">Classifiche</span></a>
+            <a href="players.html"><i class="fa-solid fa-user"></i> <span class="nav-label">Giocatori</span></a>
+            <a href="teams.html"><i class="fa-solid fa-users"></i> <span class="nav-label">Squadre</span></a>
+            <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> <span class="nav-label">Chiosco</span></a>
         </nav>
     </header>
 
-    <div class="container">
-        <h1>👤 Login</h1>
+    <div class="login-page-wrap">
 
-        <div id="login-container">
+        <!-- Pitch deco lines -->
+        <div class="pitch-deco">
+            <div class="pitch-line"></div><div class="pitch-line"></div><div class="pitch-line"></div>
+            <div class="pitch-line" style="height:60px"></div>
+            <div class="pitch-line"></div><div class="pitch-line"></div><div class="pitch-line"></div>
+        </div>
 
-            <form id="login-form" class="card">
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="username" required />
-                </div>
+        <div class="login-card-wrap">
 
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="password" required />
-                </div>
-
-                <button type="submit" class="btn">
-                    <i class="fa-solid fa-right-to-bracket"></i> Accedi
-                </button>
-
-                <p id="error-msg" class="error"></p>
-            </form>
-
-            <div id="logged-area" style="display:none;">
-                <p>✅ Sei loggato</p>
-                <button id="logout-btn" class="btn danger">
-                    <i class="fa-solid fa-right-from-bracket"></i> Logout
-                </button>
+            <!-- Brand header -->
+            <div class="login-brand">
+                <img src="/assets/img/wildcard_logo.png" alt="Wildcard" class="login-brand-logo">
+                <div class="login-brand-name">Wildcard</div>
+                <div class="login-brand-sub">Area Amministratori</div>
             </div>
 
+            <!-- Card -->
+            <div class="login-card">
+
+                <div class="login-card-header">
+                    <div class="login-card-icon">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <div>
+                        <div class="login-card-title">Accesso riservato</div>
+                        <div class="login-card-subtitle">Inserisci le tue credenziali</div>
+                    </div>
+                </div>
+
+                <div id="login-container">
+
+                    <form id="login-form">
+                        <div class="login-form-group">
+                            <label class="login-label" for="username">Username</label>
+                            <div class="login-input-wrap">
+                                <i class="fa-solid fa-user login-input-icon"></i>
+                                <input class="login-input" type="text" id="username" placeholder="Il tuo username" required />
+                            </div>
+                        </div>
+
+                        <div class="login-form-group">
+                            <label class="login-label" for="password">Password</label>
+                            <div class="login-input-wrap">
+                                <i class="fa-solid fa-key login-input-icon"></i>
+                                <input class="login-input" type="password" id="password" placeholder="••••••••" required />
+                            </div>
+                        </div>
+
+                        <button type="submit" class="login-btn">
+                            <i class="fa-solid fa-right-to-bracket"></i> Accedi
+                        </button>
+
+                        <p id="error-msg" class="login-error" style="display:none;">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            <span id="error-text">Credenziali non valide</span>
+                        </p>
+                    </form>
+
+                    <div id="logged-area" class="logged-area" style="display:none;">
+                        <span class="logged-check">✅</span>
+                        <div class="logged-text">Sei loggato come amministratore</div>
+                        <button id="logout-btn" class="logout-btn">
+                            <i class="fa-solid fa-right-from-bracket"></i> Logout
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
         </div>
     </div>
 
 <script>
-
     async function checkLogin() {
         const res = await fetch('/me');
         const data = await res.json();
@@ -88,6 +392,8 @@
 
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
+        const errMsg   = document.getElementById('error-msg');
+        errMsg.style.display = 'none';
 
         const res = await fetch('/login', {
             method: 'POST',
@@ -98,11 +404,10 @@
         const data = await res.json();
 
         if (!data.success) {
-            document.getElementById('error-msg').textContent = 'Credenziali non valide';
+            errMsg.style.display = 'flex';
             return;
         }
 
-        // login ok → redirect alla home
         window.location.href = '/index.html';
     });
 
@@ -111,7 +416,6 @@
         checkLogin();
     });
 
-    // init
     checkLogin();
 </script>
 

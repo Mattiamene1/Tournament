@@ -2,6 +2,11 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={corePlugins:{preflight:false},theme:{extend:{colors:{brand:{yellow:'#facc15',blue:'#1d4ed8',green:'#16a34a',dark:'#0f172a'}}}}}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tabellone Finale</title>
 
@@ -224,7 +229,7 @@
   </style>
 </head>
 
-<body>
+<body class="bg-slate-50">
 
 <header class="navbar">
   <div class="logo">
@@ -234,11 +239,11 @@
     </a>
   </div>
   <nav>
-    <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
-    <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
-    <a href="players.html"><i class="fa-solid fa-user"></i> Giocatori</a>
-    <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
-    <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+    <a href="matches.html"><i class="fa-solid fa-calendar"></i> <span class="nav-label">Partite</span></a>
+    <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> <span class="nav-label">Classifiche</span></a>
+    <a href="players.html"><i class="fa-solid fa-user"></i> <span class="nav-label">Giocatori</span></a>
+    <a href="teams.html"><i class="fa-solid fa-users"></i> <span class="nav-label">Squadre</span></a>
+    <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> <span class="nav-label">Chiosco</span></a>
   </nav>
 </header>
 

@@ -2,6 +2,11 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={corePlugins:{preflight:false},theme:{extend:{colors:{brand:{yellow:'#facc15',blue:'#1d4ed8',green:'#16a34a',dark:'#0f172a'}}}}}</script>
     <title>Giocatori</title>
 
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
@@ -22,11 +27,11 @@
     </div>
 
     <nav>
-        <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
-        <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
-        <a class="active" href="players.html"><i class="fa-solid fa-user"></i> Giocatori</a>
-        <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
-        <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+        <a href="matches.html"><i class="fa-solid fa-calendar"></i> <span class="nav-label">Partite</span></a>
+        <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> <span class="nav-label">Classifiche</span></a>
+        <a class="active" href="players.html"><i class="fa-solid fa-user"></i> <span class="nav-label">Giocatori</span></a>
+        <a href="teams.html"><i class="fa-solid fa-users"></i> <span class="nav-label">Squadre</span></a>
+        <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> <span class="nav-label">Chiosco</span></a>
     </nav>
 </header>
 
@@ -107,6 +112,7 @@
         </div>
     </div>
 
+    <div id="players-list-header"></div>
     <div id="players-container">
         <p>Caricamento giocatori...</p>
     </div>
@@ -241,6 +247,20 @@
   function renderPlayers() {
     const container = document.getElementById('players-container');
 
+    // Dynamic header + grid based on logged state
+    const headerEl = document.getElementById('players-list-header');
+    if (logged) {
+      headerEl.style.cssText = 'display:grid;grid-template-columns:35% 20% 20% 20% 5%;gap:10px;padding:8px 0 8px;border-bottom:2px solid #e2e8f0;margin-bottom:4px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;';
+      headerEl.innerHTML = '<span>Giocatore</span><span style="text-align:center">Ruolo</span><span style="text-align:center">Rating</span><span style="text-align:right;padding-right:8%">Squadra</span><span></span>';
+      container.style.setProperty('--player-cols', '35% 20% 20% 20% 5%');
+      container.classList.remove('guest-mode');
+    } else {
+      headerEl.style.cssText = 'display:grid;grid-template-columns:40% 25% 30% 5%;gap:10px;padding:8px 0 8px;border-bottom:2px solid #e2e8f0;margin-bottom:4px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;';
+      headerEl.innerHTML = '<span>Giocatore</span><span style="text-align:center">Ruolo</span><span style="text-align:right;padding-right:4%">Squadra</span><span></span>';
+      container.style.setProperty('--player-cols', '40% 25% 30% 5%');
+      container.classList.add('guest-mode');
+    }
+
     if (!players.length) {
       container.innerHTML = '<p>Nessun giocatore disponibile.</p>';
       return;
@@ -274,7 +294,9 @@
                  <i class="fa-solid fa-shirt"></i>
                  <span class="shirt-number">${player.shirt_number}</span>
                </span>`
-            : ''}
+            : `<span class="shirt-badge shirt-badge-pre">
+                 <i class="fa-solid fa-shirt" style="color:#facc15;font-size:23px;"></i>
+               </span>`}
           ${formatPlayerName(player)}
         </span>
 
@@ -502,8 +524,8 @@
   }
 
   function roleLabel(role) {
-    return { POR:'Portiere', DIF:'Difensore', CEN:'Centrocampista',
-             ATT:'Attaccante', PRE:'Presidente' }[role] || role;
+    return { POR:'POR', DIF:'DIF', CEN:'CEN',
+             ATT:'ATT', PRE:'PRE' }[role] || role;
   }
 
   function formatPlayerName(p) {

@@ -2,6 +2,11 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={corePlugins:{preflight:false},theme:{extend:{colors:{brand:{yellow:'#facc15',blue:'#1d4ed8',green:'#16a34a',dark:'#0f172a'}}}}}</script>
   <title>Partita</title>
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon/favicon-32x32.png">
@@ -12,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
-<body>
+<body class="bg-slate-50">
 
 <header class="navbar">
   <div class="logo">
@@ -23,11 +28,11 @@
   </div>
 
   <nav>
-    <a href="matches.html"><i class="fa-solid fa-calendar"></i> Partite</a>
-    <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> Classifiche</a>
-    <a href="players.html"><i class="fa-solid fa-user"></i> Giocatori</a>
-    <a href="teams.html"><i class="fa-solid fa-users"></i> Squadre</a>
-    <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> Chiosco</a>
+    <a href="matches.html"><i class="fa-solid fa-calendar"></i> <span class="nav-label">Partite</span></a>
+    <a href="standing.html"><i class="fa-solid fa-ranking-star"></i> <span class="nav-label">Classifiche</span></a>
+    <a href="players.html"><i class="fa-solid fa-user"></i> <span class="nav-label">Giocatori</span></a>
+    <a href="teams.html"><i class="fa-solid fa-users"></i> <span class="nav-label">Squadre</span></a>
+    <a href="bar.html"><i class="fa-solid fa-beer-mug-empty"></i> <span class="nav-label">Chiosco</span></a>
   </nav>
 </header>
 
@@ -135,21 +140,21 @@ function renderMatch(events) {
 
       <div class="match-teams">
 
-        <div class="team">
-          <span class="team-link" onclick="goToTeam(${matchData.home_team_id})">
+        <div class="team home">
+          <span class="team-link" onclick="goToTeam(${matchData.home_team_id})" style="display:contents;">
             ${matchData.home_team_name ? `
               <img src="${getTeamLogo(matchData.home_team_name)}"
                    onerror="this.onerror=null; this.style.display='none';">
             ` : ''}
-            <span><strong>${formatTeamName(matchData.home_team_name)}</strong></span>
+            <span class="team-name"><strong>${formatTeamName(matchData.home_team_name)}</strong></span>
           </span>
         </div>
 
         <div class="vs">${renderScore(matchData)}</div>
 
-        <div class="team">
-          <span class="team-link" onclick="goToTeam(${matchData.away_team_id})">
-            <span><strong>${formatTeamName(matchData.away_team_name)}</strong></span>
+        <div class="team away">
+          <span class="team-link" onclick="goToTeam(${matchData.away_team_id})" style="display:contents;">
+            <span class="team-name"><strong>${formatTeamName(matchData.away_team_name)}</strong></span>
             ${matchData.away_team_name ? `
               <img src="${getTeamLogo(matchData.away_team_name)}"
                    onerror="this.onerror=null; this.style.display='none';">
