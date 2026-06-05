@@ -26,54 +26,62 @@
       gap: 16px;
       margin-bottom: 32px;
     }
-
     .finals-header h1 { margin: 0; }
 
     /* Freeze controls */
-    .freeze-bar {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
+    .freeze-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
     .btn-freeze {
       border: none;
       border-radius: 10px;
       padding: 10px 18px;
       font-size: 14px;
-      font-weight: bold;
+      font-weight: 700;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 8px;
       transition: .2s;
+      font-family: 'Barlow', sans-serif;
     }
-    .btn-freeze.frozen  { background: #22c55e; color: #fff; }
-    .btn-freeze.open    { background: #facc15; color: #111827; }
-    .btn-freeze:hover   { opacity: .85; transform: scale(1.02); }
+    .btn-freeze.frozen { background: #16a34a; color: #fff; }
+    .btn-freeze.open   { background: #facc15; color: #0f172a; }
+    .btn-freeze:hover  { opacity: .88; transform: scale(1.02); }
 
     .btn-simulate {
       border: none;
       border-radius: 10px;
       padding: 10px 18px;
       font-size: 14px;
-      font-weight: bold;
+      font-weight: 700;
       cursor: pointer;
-      background: #334155;
-      color: #fff;
+      background: #0f172a;
+      color: #facc15;
       display: inline-flex;
       align-items: center;
       gap: 8px;
       transition: .2s;
+      font-family: 'Barlow', sans-serif;
     }
-    .btn-simulate:hover { background: #475569; transform: scale(1.02); }
+    .btn-simulate:hover { background: #1e293b; transform: scale(1.02); }
+
+    /* Freeze status chips */
+    .freeze-status { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+    .freeze-chip {
+      padding: 5px 13px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .freeze-chip.frozen { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+    .freeze-chip.open   { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
 
     /* ── Bracket layout ──────────────────────────────── */
-    .bracket-wrapper {
-      overflow-x: auto;
-      padding-bottom: 16px;
-    }
+    .bracket-wrapper { overflow-x: auto; padding-bottom: 16px; }
 
     .bracket {
       display: grid;
@@ -83,8 +91,7 @@
       min-width: 900px;
     }
 
-    /* Columns by name */
-    .col-sf-left   { display: flex; flex-direction: column; gap: 60px; padding: 0 0 0 0; }
+    .col-sf-left   { display: flex; flex-direction: column; gap: 60px; }
     .col-conn-l1   { display: flex; flex-direction: column; gap: 60px; align-items: center; }
     .col-qf-left   { display: flex; flex-direction: column; gap: 0;    align-items: center; }
     .col-conn-l2   { display: flex; flex-direction: column; gap: 0;    align-items: center; }
@@ -94,29 +101,30 @@
     .col-conn-r1   { display: flex; flex-direction: column; gap: 60px; align-items: center; }
     .col-sf-right  { display: flex; flex-direction: column; gap: 60px; }
 
-    /* Match box */
+    /* ── Match box — light theme ─────────────────────── */
     .match-box {
-      background: #1e293b;
-      border-radius: 14px;
+      background: #ffffff;
+      border-radius: 12px;
       padding: 12px 16px;
       width: 200px;
       cursor: pointer;
       transition: .2s;
-      border: 2px solid transparent;
-      box-shadow: 0 4px 16px rgba(0,0,0,.3);
+      border: 1.5px solid #e2e8f0;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07);
       position: relative;
     }
-    .match-box:hover { border-color: #facc15; transform: scale(1.02); }
+    .match-box:hover { border-color: #1d4ed8; box-shadow: 0 4px 16px rgba(29,78,216,.12); transform: scale(1.02); }
     .match-box.placeholder { opacity: .55; cursor: default; }
-    .match-box.placeholder:hover { border-color: transparent; transform: none; }
-    .match-box.live   { border-color: #ef4444; }
-    .match-box.finished { border-color: #22c55e; }
+    .match-box.placeholder:hover { border-color: #e2e8f0; transform: none; box-shadow: 0 2px 10px rgba(0,0,0,.07); }
+    .match-box.live     { border-color: #ef4444; }
+    .match-box.finished { border-color: #16a34a; }
 
     .match-box-label {
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: .08em;
-      opacity: .5;
+      color: #64748b;
+      font-weight: 700;
       margin-bottom: 8px;
     }
 
@@ -126,19 +134,20 @@
       gap: 8px;
       padding: 5px 0;
       font-size: 13px;
-      font-weight: bold;
-      border-bottom: 1px solid rgba(255,255,255,.07);
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1px solid #f1f5f9;
     }
     .match-box-team:last-child { border-bottom: none; }
 
     .match-box-team img {
-      width: 22px;
-      height: 22px;
+      width: 22px; height: 22px;
       object-fit: contain;
-      background: white;
+      background: #f8fafc;
       border-radius: 4px;
       padding: 2px;
       flex: 0 0 22px;
+      border: 1px solid #e2e8f0;
     }
 
     .match-box-team .team-name {
@@ -146,79 +155,66 @@
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
+      color: #1e293b;
     }
 
     .match-box-team .team-score {
       font-size: 15px;
-      font-weight: bold;
-      color: #facc15;
+      font-weight: 900;
+      color: #1d4ed8;
       min-width: 20px;
       text-align: right;
     }
 
-    .match-box-team.winner .team-name { color: #facc15; }
-    .match-box-team.placeholder-team  { opacity: .45; font-style: italic; font-weight: normal; }
-
-    /* Center finals */
-    .final-box {
-      background: linear-gradient(135deg, #1e293b, #0f172a);
-      border: 2px solid #facc15;
-      border-radius: 16px;
-      padding: 14px 18px;
-      width: 210px;
-      text-align: center;
-      box-shadow: 0 0 30px rgba(250,204,21,.15);
-    }
-    .final-box .match-box-label { color: #facc15; opacity: 1; font-size: 11px; }
-
-    .third-box {
-      background: #1e293b;
-      border: 2px solid #64748b;
-      border-radius: 16px;
-      padding: 14px 18px;
-      width: 210px;
-      text-align: center;
-    }
-    .third-box .match-box-label { color: #94a3b8; opacity: 1; font-size: 11px; }
-
-    /* Connector SVG lines */
-    .connector { width: 60px; }
+    .match-box-team.winner .team-name { color: #16a34a; font-weight: 900; }
+    .match-box-team.placeholder-team  { opacity: .5; font-style: italic; font-weight: 400; }
 
     /* Status badge */
     .match-status-badge {
       position: absolute;
       top: 8px; right: 10px;
       font-size: 9px;
-      font-weight: bold;
+      font-weight: 700;
       letter-spacing: .05em;
       padding: 2px 6px;
       border-radius: 20px;
     }
-    .badge-live     { background: #ef4444; color: #fff; }
-    .badge-finished { background: #22c55e; color: #fff; }
-    .badge-scheduled { background: #334155; color: #94a3b8; }
+    .badge-live      { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+    .badge-finished  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .badge-scheduled { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
 
-    /* Freeze status banner */
-    .freeze-status {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
+    /* ── Center boxes ───────────────────────────────── */
+    .final-box {
+      background: #0f172a;
+      border: 2px solid #facc15;
+      border-radius: 14px;
+      padding: 14px 18px;
+      width: 210px;
+      text-align: center;
+      box-shadow: 0 0 24px rgba(250,204,21,.18);
+      cursor: pointer;
     }
+    .final-box .match-box-label  { color: #facc15; font-size: 11px; }
+    .final-box .match-box-team   { border-bottom-color: rgba(255,255,255,.08); color: #fff; }
+    .final-box .team-name        { color: #e2e8f0; }
+    .final-box .team-score       { color: #facc15; }
+    .final-box .match-box-team.winner .team-name { color: #facc15; }
+    .final-box .match-box-team.placeholder-team  { color: rgba(255,255,255,.4); }
 
-    .freeze-chip {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: bold;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+    .third-box {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 14px;
+      padding: 14px 18px;
+      width: 210px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
     }
-    .freeze-chip.frozen { background: rgba(34,197,94,.15); color: #22c55e; border: 1px solid rgba(34,197,94,.3); }
-    .freeze-chip.open   { background: rgba(250,204,21,.1);  color: #facc15; border: 1px solid rgba(250,204,21,.3); }
+    .third-box .match-box-label { color: #64748b; font-size: 11px; }
 
-    /* Mobile */
+    /* Connector SVG */
+    .connector { width: 60px; }
+
     @media (max-width: 768px) {
       .bracket { min-width: 700px; }
       .match-box, .final-box, .third-box { width: 160px; padding: 10px 12px; }
@@ -513,71 +509,58 @@ async function createSemifinalMatches() {
 /* ═══════════════════════════════════════════════════
    BRACKET RENDER
 ═══════════════════════════════════════════════════ */
-function renderBracket() {
-  const bracket = document.getElementById('bracket');
-
-  // Resolve teams for each SF slot
-  const sfTeams = SF_SLOTS.map(slot => ({
+function resolveSFTeams() {
+  return SF_SLOTS.map(slot => ({
     ...slot,
-    home: getTeamForSlot(slot.home.g, slot.home.pos),
-    away: getTeamForSlot(slot.away.g, slot.away.pos),
+    home:  getTeamForSlot(slot.home.g, slot.home.pos),
+    away:  getTeamForSlot(slot.away.g, slot.away.pos),
     match: findFinalsMatch(slot)
   }));
+}
 
+function renderBracketLeft(sfLeft) {
+  return `
+    <div class="col-sf-left">${sfLeft.map(sf => renderMatchBox(sf)).join('')}</div>
+    <div class="col-conn-l1">${sfLeft.map(() => renderConnectorRight()).join('')}</div>
+    <div class="col-qf-left" style="display:flex;flex-direction:column;gap:20px;justify-content:center;height:100%;">
+      ${renderQFBox('Finale Sinistra', sfLeft[0], sfLeft[1])}
+    </div>
+    <div class="col-conn-l2" style="display:flex;align-items:center;justify-content:center;">
+      ${renderConnectorRight()}
+    </div>`;
+}
+
+function renderBracketRight(sfRight) {
+  return `
+    <div class="col-conn-r2" style="display:flex;align-items:center;justify-content:center;">
+      ${renderConnectorLeft()}
+    </div>
+    <div class="col-qf-right" style="display:flex;flex-direction:column;gap:20px;justify-content:center;height:100%;">
+      ${renderQFBox('Finale Destra', sfRight[0], sfRight[1])}
+    </div>
+    <div class="col-conn-r1">${sfRight.map(() => renderConnectorLeft()).join('')}</div>
+    <div class="col-sf-right">${sfRight.map(sf => renderMatchBox(sf)).join('')}</div>`;
+}
+
+function renderBracketCenter(sfLeft, sfRight) {
+  const finalMatch = finalsMatches.find(m => m.round === 'final') || null;
+  const thirdMatch = finalsMatches.find(m => m.round === 'third') || null;
+  return `
+    <div class="col-center">
+      ${renderCenterBox('🏆 Finale',     finalMatch, sfLeft[0], sfLeft[1], sfRight[0], sfRight[1], true)}
+      ${renderCenterBox('🥉 Terzo Posto', thirdMatch, sfLeft[0], sfLeft[1], sfRight[0], sfRight[1], false)}
+    </div>`;
+}
+
+function renderBracket() {
+  const sfTeams = resolveSFTeams();
   const sfLeft  = sfTeams.filter(s => s.side === 'left');
   const sfRight = sfTeams.filter(s => s.side === 'right');
 
-  // Find QF/Final matches (if they exist)
-  const finalMatch     = finalsMatches.find(m => m.round === 'final')     || null;
-  const thirdMatch     = finalsMatches.find(m => m.round === 'third')     || null;
-
-  bracket.innerHTML = `
-    <!-- Left SFs -->
-    <div class="col-sf-left">
-      ${sfLeft.map(sf => renderMatchBox(sf)).join('')}
-    </div>
-
-    <!-- Connectors L1 -->
-    <div class="col-conn-l1">
-      ${sfLeft.map(() => renderConnectorRight()).join('')}
-    </div>
-
-    <!-- QF Left placeholder -->
-    <div class="col-qf-left" style="display:flex; flex-direction:column; gap:20px; justify-content:center; height:100%;">
-      ${renderQFBox('Finale Sinistra', sfLeft[0], sfLeft[1])}
-    </div>
-
-    <!-- Connector L2 -->
-    <div class="col-conn-l2" style="display:flex; align-items:center; justify-content:center;">
-      ${renderConnectorRight()}
-    </div>
-
-    <!-- Center -->
-    <div class="col-center">
-      ${renderCenterBox('🏆 Finale', finalMatch, sfLeft[0], sfLeft[1], sfRight[0], sfRight[1], true)}
-      ${renderCenterBox('🥉 Terzo Posto', thirdMatch, sfLeft[0], sfLeft[1], sfRight[0], sfRight[1], false)}
-    </div>
-
-    <!-- Connector R2 -->
-    <div class="col-conn-r2" style="display:flex; align-items:center; justify-content:center;">
-      ${renderConnectorLeft()}
-    </div>
-
-    <!-- QF Right placeholder -->
-    <div class="col-qf-right" style="display:flex; flex-direction:column; gap:20px; justify-content:center; height:100%;">
-      ${renderQFBox('Finale Destra', sfRight[0], sfRight[1])}
-    </div>
-
-    <!-- Connectors R1 -->
-    <div class="col-conn-r1">
-      ${sfRight.map(() => renderConnectorLeft()).join('')}
-    </div>
-
-    <!-- Right SFs -->
-    <div class="col-sf-right">
-      ${sfRight.map(sf => renderMatchBox(sf)).join('')}
-    </div>
-  `;
+  document.getElementById('bracket').innerHTML =
+    renderBracketLeft(sfLeft) +
+    renderBracketCenter(sfLeft, sfRight) +
+    renderBracketRight(sfRight);
 }
 
 function findFinalsMatch(slot) {
@@ -664,26 +647,29 @@ function renderQFBox(label, sf1, sf2) {
   `;
 }
 
+function resolveFinalistTeams(sfL1, sfL2, sfR1, sfR2, isFinal) {
+  const pickH = isFinal ? getQFWinner : getQFLoser;
+  const pickA = isFinal ? getQFWinner : getQFLoser;
+  return {
+    h: pickH([sfL1, sfL2]),
+    a: pickA([sfR1, sfR2])
+  };
+}
+
 function renderCenterBox(label, match, sfL1, sfL2, sfR1, sfR2, isFinal) {
-  const leftWinner  = isFinal ? getWinner(sfL1) || getWinner(sfL2) : getLoser(sfL1) || getLoser(sfL2);
-  const rightWinner = isFinal ? getWinner(sfR1) || getWinner(sfR2) : getLoser(sfR1) || getLoser(sfR2);
-
-  // For final: winner of left QF vs winner of right QF
-  // For third: losers
-  const h = isFinal ? getQFWinner([sfL1, sfL2]) : getQFLoser([sfL1, sfL2]);
-  const a = isFinal ? getQFWinner([sfR1, sfR2]) : getQFLoser([sfR1, sfR2]);
-
-  const hScore = match && match.status !== 'scheduled' ? match.home_score : null;
-  const aScore = match && match.status !== 'scheduled' ? match.away_score : null;
-  const onclick = match ? `onclick="window.location.href='match.html?id=${match.id}'"` : '';
-
+  const { h, a } = resolveFinalistTeams(sfL1, sfL2, sfR1, sfR2, isFinal);
+  const hScore   = match?.status !== 'scheduled' ? match?.home_score ?? null : null;
+  const aScore   = match?.status !== 'scheduled' ? match?.away_score ?? null : null;
+  const onclick  = match ? `onclick="window.location.href='match.html?id=${match.id}'"` : '';
   const boxClass = isFinal ? 'final-box' : 'third-box';
+  const hLabel   = isFinal ? 'Vincitore Sinistra' : 'Perdente Sinistra';
+  const aLabel   = isFinal ? 'Vincitore Destra'   : 'Perdente Destra';
 
   return `
     <div class="${boxClass}" style="cursor:${match ? 'pointer' : 'default'}" ${onclick}>
       <div class="match-box-label">${label}</div>
-      ${renderTeamRow(h, hScore, hScore > aScore && hScore !== null, isFinal ? 'Vincitore Sinistra' : 'Perdente Sinistra')}
-      ${renderTeamRow(a, aScore, aScore > hScore && aScore !== null, isFinal ? 'Vincitore Destra'  : 'Perdente Destra')}
+      ${renderTeamRow(h, hScore, hScore !== null && hScore > aScore, hLabel)}
+      ${renderTeamRow(a, aScore, aScore !== null && aScore > hScore, aLabel)}
     </div>
   `;
 }
@@ -727,7 +713,7 @@ function getQFLoser(sfs) {
 function renderConnectorRight() {
   return `
     <svg class="connector" height="40" viewBox="0 0 60 40" fill="none">
-      <path d="M0 20 H60" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+      <path d="M0 20 H60" stroke="#cbd5e1" stroke-width="2"/>
     </svg>
   `;
 }
@@ -735,7 +721,7 @@ function renderConnectorRight() {
 function renderConnectorLeft() {
   return `
     <svg class="connector" height="40" viewBox="0 0 60 40" fill="none">
-      <path d="M60 20 H0" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+      <path d="M60 20 H0" stroke="#cbd5e1" stroke-width="2"/>
     </svg>
   `;
 }
