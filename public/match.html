@@ -97,110 +97,110 @@ async function loadMatchPage() {
   }
 }
 
+// ── renderMatch helpers ───────────────────────────────────────────────────
+
+function renderMatchHeader() {
+  const editBtn = logged ? `
+    <button class="match-datetime-edit-toggle" onclick="toggleScheduleEdit()" title="Modifica programmazione">
+      <i class="fa-solid ${scheduleEditMode ? 'fa-xmark' : 'fa-pen'}"></i>
+    </button>` : '';
+
+  const startBtn = logged && matchData.status === 'scheduled' ? `
+    <button class="match-state-btn" onclick="startMatch()">
+      <i class="fa-solid fa-play"></i> Inizia partita
+    </button>` : '';
+
+  const finishBtn = logged && matchData.status === 'live' ? `
+    <button class="match-state-btn danger" onclick="finishMatch()">
+      <i class="fa-solid fa-flag-checkered"></i> Termina partita
+    </button>` : '';
+
+  const scheduleBox = logged && scheduleEditMode ? `
+    <div class="schedule-edit-box">
+      <input class="match-datetime-input" id="match-date" type="datetime-local" value="${toDateTimeLocal(matchData.match_date)}">
+      <button class="match-datetime-button" onclick="updateMatchDate()">Salva programmazione</button>
+    </div>` : '';
+
+  return `
+    <div class="match-header match-detail-header">
+      <div class="match-header-left">
+        <span class="match-date">${formatDate(matchData.match_date)}</span>
+        ${editBtn}
+      </div>
+      <div class="match-header-center">${startBtn}${finishBtn}</div>
+      <span class="match-group">${matchData.group_name || ''}</span>
+    </div>
+    ${scheduleBox}`;
+}
+
+function renderMatchTeams() {
+  const homeLogo = matchData.home_team_name
+    ? `<img src="${getTeamLogo(matchData.home_team_name)}" onerror="this.onerror=null; this.style.display='none';">` : '';
+  const awayLogo = matchData.away_team_name
+    ? `<img src="${getTeamLogo(matchData.away_team_name)}" onerror="this.onerror=null; this.style.display='none';">` : '';
+
+  return `
+    <div class="match-teams">
+      <div class="team home">
+        <span class="team-link" onclick="goToTeam(${matchData.home_team_id})" style="display:contents;">
+          ${homeLogo}
+          <span class="team-name"><strong>${formatTeamName(matchData.home_team_name)}</strong></span>
+        </span>
+      </div>
+      <div class="vs">${renderScore(matchData)}</div>
+      <div class="team away">
+        <span class="team-link" onclick="goToTeam(${matchData.away_team_id})" style="display:contents;">
+          <span class="team-name"><strong>${formatTeamName(matchData.away_team_name)}</strong></span>
+          ${awayLogo}
+        </span>
+      </div>
+    </div>`;
+}
+
+function renderMatchStatus() {
+  const timer = matchData.status === 'live'
+    ? `<span class="live-timer-inline">⏱ <span id="match-timer">${getTimerText()}</span></span>` : '';
+  return `<div class="match-status ${matchData.status}"><span>${renderStatus(matchData.status)}</span>${timer}</div>`;
+}
+
+function renderReferee() {
+  if (!matchData.referee) return '';
+  return `
+    <div style="margin-top:14px; text-align:center; font-size:14px; opacity:.7; display:flex; align-items:center; justify-content:center; gap:8px;">
+      <img src="/assets/svg/whistle.svg" style="width:25px; height:25px; filter:invert(1); opacity:.7;">
+      <span class="event-player-link tl-player" onclick="goToReferee(${matchData.referee.id})">
+        ${matchData.referee.first_name} ${matchData.referee.last_name}
+      </span>
+    </div>`;
+}
+
+function renderAddEventButton() {
+  if (!logged || matchData.status !== 'live') return '';
+  return `
+    <div class="match-event-action">
+      <button onclick="toggleEventCreate()">
+        <i class="fa-solid ${eventCreateMode ? 'fa-xmark' : 'fa-plus'}"></i>
+        ${eventCreateMode ? 'Chiudi evento' : 'Aggiungi evento'}
+      </button>
+    </div>`;
+}
+
+// ── renderMatch ───────────────────────────────────────────────────────────
+
 function renderMatch(events) {
   document.getElementById('match-page').innerHTML = `
     <div class="match-card match-detail-card">
-
-      <div class="match-header match-detail-header">
-
-        <div class="match-header-left">
-          <span class="match-date">${formatDate(matchData.match_date)}</span>
-
-          ${logged ? `
-            <button class="match-datetime-edit-toggle" onclick="toggleScheduleEdit()" title="Modifica programmazione">
-              <i class="fa-solid ${scheduleEditMode ? 'fa-xmark' : 'fa-pen'}"></i>
-            </button>
-          ` : ''}
-        </div>
-
-        <div class="match-header-center">
-          ${logged && matchData.status === 'scheduled' ? `
-            <button class="match-state-btn" onclick="startMatch()">
-              <i class="fa-solid fa-play"></i> Inizia partita
-            </button>
-          ` : ''}
-
-          ${logged && matchData.status === 'live' ? `
-            <button class="match-state-btn danger" onclick="finishMatch()">
-              <i class="fa-solid fa-flag-checkered"></i> Termina partita
-            </button>
-          ` : ''}
-        </div>
-
-        <span class="match-group">${matchData.group_name || ''}</span>
-
-      </div>
-
-      ${logged && scheduleEditMode ? `
-        <div class="schedule-edit-box">
-          <input class="match-datetime-input" id="match-date" type="datetime-local" value="${toDateTimeLocal(matchData.match_date)}">
-          <button class="match-datetime-button" onclick="updateMatchDate()">Salva programmazione</button>
-        </div>
-      ` : ''}
-
-      <div class="match-teams">
-
-        <div class="team home">
-          <span class="team-link" onclick="goToTeam(${matchData.home_team_id})" style="display:contents;">
-            ${matchData.home_team_name ? `
-              <img src="${getTeamLogo(matchData.home_team_name)}"
-                   onerror="this.onerror=null; this.style.display='none';">
-            ` : ''}
-            <span class="team-name"><strong>${formatTeamName(matchData.home_team_name)}</strong></span>
-          </span>
-        </div>
-
-        <div class="vs">${renderScore(matchData)}</div>
-
-        <div class="team away">
-          <span class="team-link" onclick="goToTeam(${matchData.away_team_id})" style="display:contents;">
-            <span class="team-name"><strong>${formatTeamName(matchData.away_team_name)}</strong></span>
-            ${matchData.away_team_name ? `
-              <img src="${getTeamLogo(matchData.away_team_name)}"
-                   onerror="this.onerror=null; this.style.display='none';">
-            ` : ''}
-          </span>
-        </div>
-
-      </div>
-
-      <div class="match-status ${matchData.status}">
-        <span>${renderStatus(matchData.status)}</span>
-        ${matchData.status === 'live' ? `
-          <span class="live-timer-inline">⏱ <span id="match-timer">${getTimerText()}</span></span>
-        ` : ''}
-      </div>
-
-      ${matchData.referee ? `
-        <div style="margin-top:14px; text-align:center; font-size:14px; opacity:.7; display:flex; align-items:center; justify-content:center; gap:8px;">
-          <img src="/assets/svg/whistle.svg" style="width:25px; height:25px; filter:invert(1); opacity:.7;">
-          <span class="event-player-link tl-player" onclick="goToReferee(${matchData.referee.id})">
-            ${matchData.referee.first_name} ${matchData.referee.last_name}
-          </span>
-        </div>
-      ` : ''}
-
+      ${renderMatchHeader()}
+      ${renderMatchTeams()}
+      ${renderMatchStatus()}
+      ${renderReferee()}
     </div>
-
-    ${logged && matchData.status === 'live' ? `
-      <div class="match-event-action">
-        <button onclick="toggleEventCreate()">
-          <i class="fa-solid ${eventCreateMode ? 'fa-xmark' : 'fa-plus'}"></i>
-          ${eventCreateMode ? 'Chiudi evento' : 'Aggiungi evento'}
-        </button>
-      </div>
-    ` : ''}
-
+    ${renderAddEventButton()}
     ${logged && matchData.status === 'live' && eventCreateMode ? renderAddEventBox() : ''}
-
-    <div id="events-list">
-      ${renderEvents(events)}
-    </div>
+    <div id="events-list">${renderEvents(events)}</div>
   `;
 
-  if (matchData.status === 'live') {
-    startTimer();
-  }
+  if (matchData.status === 'live') startTimer();
 }
 
 function renderAddEventBox() {
