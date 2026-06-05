@@ -10,7 +10,7 @@ const PLAYERS_DIR = path.resolve(__dirname, '..', 'public', 'assets', 'img', 'pl
  * sia dentro la cartella attesa (prevenzione path traversal).
  */
 function safePlayerPath(id) {
-  const numericId = parseInt(id, 10);
+  const numericId = Number.parseInt(id, 10);
   if (!Number.isInteger(numericId) || numericId <= 0) {
     throw new Error('ID non valido');
   }

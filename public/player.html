@@ -153,7 +153,7 @@
   }
 
   function renderStars(rating) {
-    rating = parseInt(rating);
+    rating = Number.parseInt(rating);
 
     return Array.from({ length: rating })
       .map(() => `<i class="fa-solid fa-star"></i>`)
