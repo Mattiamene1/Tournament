@@ -64,6 +64,8 @@
       font-family: 'Barlow', sans-serif;
     }
     .btn-simulate:hover { background: #1e293b; transform: scale(1.02); }
+    .btn-simulate.btn-reset { background: #ef4444; color: #fff; }
+    .btn-simulate.btn-reset:hover { background: #dc2626; }
 
     /* Freeze status chips */
     .freeze-status { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
@@ -81,43 +83,56 @@
     .freeze-chip.open   { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
 
     /* ── Bracket layout ──────────────────────────────── */
-    .bracket-wrapper { overflow-x: auto; padding-bottom: 16px; }
+    .bracket-wrapper { overflow-x: auto; padding-bottom: 24px; }
 
     .bracket {
       display: grid;
-      grid-template-columns: 1fr 60px 1fr 60px 220px 60px 1fr 60px 1fr;
+      grid-template-columns: 210px 48px 200px 48px 220px 48px 200px 48px 210px;
       align-items: center;
       gap: 0;
       min-width: 900px;
     }
 
-    .col-sf-left   { display: flex; flex-direction: column; gap: 60px; }
-    .col-conn-l1   { display: flex; flex-direction: column; gap: 60px; align-items: center; }
-    .col-qf-left   { display: flex; flex-direction: column; gap: 0;    align-items: center; }
-    .col-conn-l2   { display: flex; flex-direction: column; gap: 0;    align-items: center; }
-    .col-center    { display: flex; flex-direction: column; gap: 20px; align-items: center; }
-    .col-conn-r2   { display: flex; flex-direction: column; gap: 0;    align-items: center; }
-    .col-qf-right  { display: flex; flex-direction: column; gap: 0;    align-items: center; }
-    .col-conn-r1   { display: flex; flex-direction: column; gap: 60px; align-items: center; }
-    .col-sf-right  { display: flex; flex-direction: column; gap: 60px; }
+    .col-sf-left   { display: flex; flex-direction: column; gap: 24px; }
+    .col-conn-l1   { display: flex; flex-direction: column; gap: 24px; align-items: center; justify-content: center; }
+    .col-qf-left   { display: flex; flex-direction: column; gap: 0; align-items: center; justify-content: center; }
+    .col-conn-l2   { display: flex; align-items: center; justify-content: center; }
+    .col-center    { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+    .col-conn-r2   { display: flex; align-items: center; justify-content: center; }
+    .col-qf-right  { display: flex; flex-direction: column; gap: 0; align-items: center; justify-content: center; }
+    .col-conn-r1   { display: flex; flex-direction: column; gap: 24px; align-items: center; justify-content: center; }
+    .col-sf-right  { display: flex; flex-direction: column; gap: 24px; }
 
-    /* ── Match box — light theme ─────────────────────── */
+    /* ── Match box — dark blue theme ────────────────── */
     .match-box {
-      background: #ffffff;
+      background: #0f172a;
       border-radius: 12px;
-      padding: 12px 16px;
+      padding: 12px 14px;
       width: 200px;
       cursor: pointer;
       transition: .2s;
-      border: 1.5px solid #e2e8f0;
-      box-shadow: 0 2px 10px rgba(0,0,0,.07);
+      border: 1.5px solid #1e3a5f;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
       position: relative;
     }
-    .match-box:hover { border-color: #1d4ed8; box-shadow: 0 4px 16px rgba(29,78,216,.12); transform: scale(1.02); }
-    .match-box.placeholder { opacity: .55; cursor: default; }
-    .match-box.placeholder:hover { border-color: #e2e8f0; transform: none; box-shadow: 0 2px 10px rgba(0,0,0,.07); }
-    .match-box.live     { border-color: #ef4444; }
+    .match-box:hover { border-color: #facc15; box-shadow: 0 6px 20px rgba(250,204,21,.15); transform: scale(1.02); }
+    .match-box.placeholder { opacity: .5; cursor: default; }
+    .match-box.placeholder:hover { border-color: #1e3a5f; transform: none; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+    .match-box.live     { border-color: #ef4444; box-shadow: 0 0 16px rgba(239,68,68,.2); }
     .match-box.finished { border-color: #16a34a; }
+
+    /* QF box — same dark blue, dashed border */
+    .match-box.qf-box {
+      background: #0f172a;
+      border: 1.5px dashed #334155;
+      cursor: default;
+    }
+    .match-box.qf-box:hover {
+      border-color: #facc15;
+      border-style: dashed;
+      transform: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
+    }
 
     .match-box-label {
       font-size: 10px;
@@ -125,20 +140,23 @@
       letter-spacing: .08em;
       color: #64748b;
       font-weight: 700;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
+    /* Team row — white pill */
     .match-box-team {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 5px 0;
+      padding: 6px 8px;
+      margin-bottom: 5px;
       font-size: 13px;
       font-weight: 700;
-      color: #0f172a;
-      border-bottom: 1px solid #f1f5f9;
+      background: #ffffff;
+      border-radius: 8px;
+      border: none;
     }
-    .match-box-team:last-child { border-bottom: none; }
+    .match-box-team:last-child { margin-bottom: 0; }
 
     .match-box-team img {
       width: 22px; height: 22px;
@@ -155,19 +173,25 @@
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
-      color: #1e293b;
+      color: #0f172a;
     }
 
     .match-box-team .team-score {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 900;
       color: #1d4ed8;
       min-width: 20px;
       text-align: right;
     }
 
-    .match-box-team.winner .team-name { color: #16a34a; font-weight: 900; }
-    .match-box-team.placeholder-team  { opacity: .5; font-style: italic; font-weight: 400; }
+    .match-box-team.winner .team-name { color: #16a34a; }
+    .match-box-team.winner .team-score { color: #16a34a; }
+    .match-box-team.placeholder-team {
+      background: #1e293b;
+      font-style: italic;
+      font-weight: 400;
+    }
+    .match-box-team.placeholder-team .team-name { color: #475569; }
 
     /* Status badge */
     .match-status-badge {
@@ -179,36 +203,32 @@
       padding: 2px 6px;
       border-radius: 20px;
     }
-    .badge-live      { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
-    .badge-finished  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-    .badge-scheduled { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+    .badge-live      { background: #ef4444; color: #fff; }
+    .badge-finished  { background: #16a34a; color: #fff; }
+    .badge-scheduled { background: #1e293b; color: #64748b; }
 
     /* ── Center boxes ───────────────────────────────── */
     .final-box {
       background: #0f172a;
       border: 2px solid #facc15;
       border-radius: 14px;
-      padding: 14px 18px;
+      padding: 14px 14px;
       width: 210px;
       text-align: center;
-      box-shadow: 0 0 24px rgba(250,204,21,.18);
+      box-shadow: 0 0 28px rgba(250,204,21,.2);
       cursor: pointer;
     }
-    .final-box .match-box-label  { color: #facc15; font-size: 11px; }
-    .final-box .match-box-team   { border-bottom-color: rgba(255,255,255,.08); color: #fff; }
-    .final-box .team-name        { color: #e2e8f0; }
-    .final-box .team-score       { color: #facc15; }
-    .final-box .match-box-team.winner .team-name { color: #facc15; }
-    .final-box .match-box-team.placeholder-team  { color: rgba(255,255,255,.4); }
+    .final-box .match-box-label { color: #facc15; font-size: 11px; }
+    .final-box .match-box-team  { text-align: left; }
 
     .third-box {
-      background: #ffffff;
-      border: 1.5px solid #cbd5e1;
+      background: #0f172a;
+      border: 1.5px solid #334155;
       border-radius: 14px;
-      padding: 14px 18px;
+      padding: 14px 14px;
       width: 210px;
       text-align: center;
-      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
     }
     .third-box .match-box-label { color: #64748b; font-size: 11px; }
 
@@ -269,7 +289,8 @@ let allMatches   = [];
 let allTeams     = [];
 let allGroups    = [];         // [{name, teams: [{id,name,points,...}]}]
 let frozenGroups = {};         // { groupName: [ sorted team objects ] }
-let finalsMatches = [];        // matches with no group_id (finals)
+let finalsMatches = [];        // matches without group_id
+let simulated    = false;      // true solo dopo aver premuto Simula
 
 /* slot mapping for 2 groups A/B:
    SF1 = 2°B vs 3°A   (left)
@@ -296,7 +317,7 @@ const FINALS_REFEREE = 1;
   await loadData();
   renderFreezeBar();
   renderFreezeStatus();
-  renderBracket();
+  renderBracket();   // parte vuoto — frozenGroups è {} di default
 })();
 
 async function checkAuth() {
@@ -380,7 +401,9 @@ function ensureTeam(g, id, name) {
    groups sorted alphabetically → index 0 = Girone A, 1 = Girone B
 ═══════════════════════════════════════════════════ */
 function getTeamForSlot(groupIdx, pos) {
-  // Use frozen if available, else live standings
+  // Se non è stato premuto Simula, nessuna squadra
+  if (!simulated) return null;
+
   const groups = allGroups;
   if (groupIdx >= groups.length) return null;
 
@@ -396,25 +419,31 @@ function getTeamForSlot(groupIdx, pos) {
 function renderFreezeBar() {
   const bar = document.getElementById('freeze-bar');
 
-  // Simulate button — everyone
+  if (!simulated) {
+    // Solo bottone Simula
+    bar.innerHTML = `
+      <button class="btn-simulate" onclick="simulateBracket()">
+        <i class="fa-solid fa-rotate"></i> Simula Tabellone
+      </button>`;
+    return;
+  }
+
+  // Dopo simulazione: bottone reset + freeze per admin
   bar.innerHTML = `
-    <button class="btn-simulate" onclick="simulateBracket()">
-      <i class="fa-solid fa-rotate"></i> Simula Tabellone
-    </button>
-  `;
+    <button class="btn-simulate btn-reset" onclick="resetBracket()">
+      <i class="fa-solid fa-xmark"></i> Svuota Tabellone
+    </button>`;
 
   if (!logged) return;
 
-  // Freeze buttons per group — admin only
   allGroups.forEach(g => {
     const isFrozen = !!frozenGroups[g.name];
     bar.innerHTML += `
       <button class="btn-freeze ${isFrozen ? 'frozen' : 'open'}"
               onclick="toggleFreeze('${g.name}')">
         <i class="fa-solid fa-${isFrozen ? 'lock' : 'lock-open'}"></i>
-        ${isFrozen ? 'Girone ' + g.name + ' Congelato' : 'Congela Girone ' + g.name}
-      </button>
-    `;
+        ${isFrozen ? g.name + ' Congelato' : 'Congela ' + g.name}
+      </button>`;
   });
 }
 
@@ -448,9 +477,19 @@ async function toggleFreeze(groupName) {
 }
 
 async function simulateBracket() {
-  // Reset frozen to live standings (non salva, solo aggiorna la vista)
+  // Popola frozenGroups con la classifica live e mostra il tabellone
   frozenGroups = {};
   allGroups.forEach(g => { frozenGroups[g.name] = g.teams; });
+  simulated = true;
+  renderFreezeBar();
+  renderFreezeStatus();
+  renderBracket();
+}
+
+function resetBracket() {
+  simulated    = false;
+  frozenGroups = {};
+  renderFreezeBar();
   renderFreezeStatus();
   renderBracket();
 }
@@ -466,7 +505,7 @@ function renderFreezeStatus() {
     return `
       <span class="freeze-chip ${isFrozen ? 'frozen' : 'open'}">
         <i class="fa-solid fa-${isFrozen ? 'lock' : 'lock-open'}"></i>
-        Girone ${g.name}: ${isFrozen ? 'Congelato' : 'In corso'}
+        ${g.name}: ${isFrozen ? 'Congelato' : 'In corso'}
       </span>
     `;
   }).join('');
@@ -522,20 +561,16 @@ function renderBracketLeft(sfLeft) {
   return `
     <div class="col-sf-left">${sfLeft.map(sf => renderMatchBox(sf)).join('')}</div>
     <div class="col-conn-l1">${sfLeft.map(() => renderConnectorRight()).join('')}</div>
-    <div class="col-qf-left" style="display:flex;flex-direction:column;gap:20px;justify-content:center;height:100%;">
+    <div class="col-qf-left">
       ${renderQFBox('Finale Sinistra', sfLeft[0], sfLeft[1])}
     </div>
-    <div class="col-conn-l2" style="display:flex;align-items:center;justify-content:center;">
-      ${renderConnectorRight()}
-    </div>`;
+    <div class="col-conn-l2">${renderConnectorRight()}</div>`;
 }
 
 function renderBracketRight(sfRight) {
   return `
-    <div class="col-conn-r2" style="display:flex;align-items:center;justify-content:center;">
-      ${renderConnectorLeft()}
-    </div>
-    <div class="col-qf-right" style="display:flex;flex-direction:column;gap:20px;justify-content:center;height:100%;">
+    <div class="col-conn-r2">${renderConnectorLeft()}</div>
+    <div class="col-qf-right">
       ${renderQFBox('Finale Destra', sfRight[0], sfRight[1])}
     </div>
     <div class="col-conn-r1">${sfRight.map(() => renderConnectorLeft()).join('')}</div>
@@ -639,7 +674,7 @@ function renderQFBox(label, sf1, sf2) {
   const w2 = getWinner(sf2);
 
   return `
-    <div class="match-box ${!w1 && !w2 ? 'placeholder' : ''}">
+    <div class="match-box qf-box">
       <div class="match-box-label">${label}</div>
       ${renderTeamRow(w1, null, false, 'Vincitore ' + (sf1?.label || ''))}
       ${renderTeamRow(w2, null, false, 'Vincitore ' + (sf2?.label || ''))}
@@ -713,7 +748,7 @@ function getQFLoser(sfs) {
 function renderConnectorRight() {
   return `
     <svg class="connector" height="40" viewBox="0 0 60 40" fill="none">
-      <path d="M0 20 H60" stroke="#cbd5e1" stroke-width="2"/>
+      <path d="M0 20 H60" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4 3"/>
     </svg>
   `;
 }
@@ -721,7 +756,7 @@ function renderConnectorRight() {
 function renderConnectorLeft() {
   return `
     <svg class="connector" height="40" viewBox="0 0 60 40" fill="none">
-      <path d="M60 20 H0" stroke="#cbd5e1" stroke-width="2"/>
+      <path d="M60 20 H0" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4 3"/>
     </svg>
   `;
 }
