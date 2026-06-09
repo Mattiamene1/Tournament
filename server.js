@@ -17,10 +17,6 @@ const upload = multer({
 // ── Sessione ──────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(express.json({
-  verify: (req, res, buf) => { req.rawBody = buf; }   // Buffer of the exact bytes
-}));
-
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
