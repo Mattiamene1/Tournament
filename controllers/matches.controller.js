@@ -79,8 +79,57 @@ async function startMatch(req, res) {
 
 async function finishMatch(req, res) {
   try {
-    await Match.finishMatch(req.params.id);
-    res.json({ success: true });
+    const result = await Match.finishMatch(req.params.id);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({ success: true, shootout: result.shootout, match: updatedMatch });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function endFirstHalf(req, res) {
+  try {
+    await Match.endFirstHalf(req.params.id);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({ success: true, match: updatedMatch });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function startSecondHalf(req, res) {
+  try {
+    await Match.startSecondHalf(req.params.id);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({ success: true, match: updatedMatch });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function updateShootoutScore(req, res) {
+  try {
+    const { side, delta } = req.body;
+    if (side !== 'home' && side !== 'away') {
+      return res.status(400).json({ error: 'side non valido (home|away)' });
+    }
+    await Match.updateShootoutScore(req.params.id, side, delta);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({ success: true, match: updatedMatch });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function finishShootout(req, res) {
+  try {
+    await Match.finishShootout(req.params.id);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({ success: true, match: updatedMatch });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -94,5 +143,9 @@ module.exports = {
   updateMatch,
   deleteMatch,
   startMatch,
-  finishMatch
+  finishMatch,
+  endFirstHalf,
+  startSecondHalf,
+  updateShootoutScore,
+  finishShootout
 };

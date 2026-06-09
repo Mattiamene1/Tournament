@@ -82,12 +82,49 @@ async function getMatchEventById(req, res) {
   }
 }
 
+/*
+  Calcola quanti gol vale un evento ai fini del punteggio del tabellone.
+  - goal  → 1
+  - bonus → goal_value del bonus (getMatchEventById restituisce già bonus_value
+            tramite il JOIN sulla tabella bonuses)
+  - altro → 0
+  Rispecchia la logica di createMatchEvent, così update/delete possono
+  "annullare" o "riapplicare" l'effetto sullo score in modo coerente.
+*/
+function scoreDeltaForEvent(event) {
+  if (!event) return 0;
+  if (event.event_type === 'goal') return 1;
+  if (event.event_type === 'bonus') return Number(event.bonus_value || 0);
+  return 0;
+}
+
 /* UPDATE */
 async function updateMatchEvent(req, res) {
   try {
+    // 1) annullo l'effetto del vecchio evento sul punteggio
+    const oldEvent = await MatchEvent.getMatchEventById(req.params.id);
+    if (oldEvent) {
+      const oldDelta = scoreDeltaForEvent(oldEvent);
+      if (oldDelta > 0) {
+        await MatchEvent.updateMatchScore(oldEvent.match_id, oldEvent.team_id, -oldDelta);
+      }
+    }
+
+    // 2) applico la modifica
     await MatchEvent.updateMatchEvent(req.params.id, req.body);
+
+    // 3) applico l'effetto del nuovo evento (gestisce cambio squadra/tipo/bonus)
+    const newEvent = await MatchEvent.getMatchEventById(req.params.id);
+    if (newEvent) {
+      const newDelta = scoreDeltaForEvent(newEvent);
+      if (newDelta > 0) {
+        await MatchEvent.updateMatchScore(newEvent.match_id, newEvent.team_id, newDelta);
+      }
+    }
+
     res.json({ success: true });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 }
@@ -95,9 +132,19 @@ async function updateMatchEvent(req, res) {
 /* DELETE */
 async function deleteMatchEvent(req, res) {
   try {
+    // annullo l'effetto sul punteggio prima di cancellare
+    const event = await MatchEvent.getMatchEventById(req.params.id);
+    if (event) {
+      const delta = scoreDeltaForEvent(event);
+      if (delta > 0) {
+        await MatchEvent.updateMatchScore(event.match_id, event.team_id, -delta);
+      }
+    }
+
     await MatchEvent.deleteMatchEvent(req.params.id);
     res.json({ success: true });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 }

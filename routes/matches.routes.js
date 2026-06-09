@@ -21,6 +21,12 @@ router.delete('/:id', isAuthenticated, controller.deleteMatch);
 
 /* Additional Routes */
 router.post('/:id/start', isAuthenticated, controller.startMatch);
+router.post('/:id/end-first-half', isAuthenticated, controller.endFirstHalf);
+router.post('/:id/start-second-half', isAuthenticated, controller.startSecondHalf);
 router.post('/:id/finish', isAuthenticated, controller.finishMatch);
+
+/* Shootout (calci di rigore) */
+router.post('/:id/shootout', isAuthenticated, controller.updateShootoutScore);
+router.post('/:id/finish-shootout', isAuthenticated, controller.finishShootout);
 
 module.exports = router;
