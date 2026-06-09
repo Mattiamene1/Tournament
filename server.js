@@ -48,7 +48,7 @@ app.get('/', (req, res) => {
 // ── Webhook GitHub ────────────────────────────────────────────────────────
 app.post('/HD07hVNDe7vAt2oe', (req, res) => {
     
-    const secret = 'hacktheworld'; // Retrieve this from your environment or conf
+    const secret = process.env.SECRET; // Retrieve this from your environment or conf
     //const head = req.headers['X-Hub-Signature-256'];
     const head = req.headers['x-hub-signature-256'];
     if (!head) {
