@@ -58,7 +58,6 @@ async function loadMatches() {
 
     matches.forEach(matchData => {
       startMatchesTimers();
-      console.log(matchData)
       container.innerHTML += `
         <div class="match-card clickable" onclick="goToMatch(${matchData.id})">
 
@@ -122,7 +121,7 @@ function formatTeamName(name) {
 }
 
 function getTeamLogo(name) {
-  return `/assets/img/teams/${name.toLowerCase().replace(/\s+/g,'_')}_logo.png`;
+  return `/assets/storage/teams/${name.toLowerCase().replace(/\s+/g,'_')}_logo.png`;
 }
 
 function renderScore(match) {

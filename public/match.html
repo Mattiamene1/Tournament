@@ -988,7 +988,7 @@ function formatTeamName(name) {
 
 function getTeamLogo(name) {
   if (!name || !String(name).trim()) return '';
-  return `/assets/img/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
+  return `/assets/storage/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
 }
 
 function goToPlayer(id)  { window.location.href = `player.html?id=${id}`; }

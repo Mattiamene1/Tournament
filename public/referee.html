@@ -121,13 +121,13 @@
 
           <div class="player-image" id="referee-image-box">
             <img
-              src="/assets/img/referees/${r.id}.png"
+              src="/assets/storage/referees/${r.id}.png"
               alt="${r.first_name} ${r.last_name}"
               onerror="
                 this.onerror=null;
                 ${logged
                   ? `showUploadRefereePhotoButton(${r.id})`
-                  : `this.src='/assets/img/players/default.png'`};
+                  : `this.src='/assets/storage/players/default.png'`};
               "
             >
           </div>

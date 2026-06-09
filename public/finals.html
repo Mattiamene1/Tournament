@@ -764,7 +764,7 @@ function renderConnectorLeft() {
 /* ── Utils ── */
 function getTeamLogo(name) {
   if (!name) return '';
-  return `/assets/img/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
+  return `/assets/storage/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
 }
 
 function formatTeamName(name) {

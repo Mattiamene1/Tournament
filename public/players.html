@@ -285,7 +285,7 @@
         <!-- ── Summary row ──────────────────────────────────── -->
         <span class="player-link" onclick="goToPlayer(${player.id})">
           <img
-            src="/assets/img/players/${player.id}.png"
+            src="/assets/storage/players/${player.id}.png"
             onerror="this.style.display='none'"
             style="width:34px; height:34px; border-radius:50%; object-fit:cover; margin-right:8px;"
           >
@@ -529,7 +529,7 @@
 
   function getTeamLogo(name) {
     if (!name) return '';
-    return `/assets/img/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
+    return `/assets/storage/teams/${String(name).toLowerCase().trim().replace(/\s+/g,'_')}_logo.png`;
   }
 
   function goToPlayer(id) { window.location.href = `player.html?id=${id}`; }

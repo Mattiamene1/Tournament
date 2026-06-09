@@ -136,7 +136,7 @@
 
                 <div id="info" class="tab-content active">
                     <div class="team-photo-card">
-                        <img src="/assets/img/teams/${team.id}.png"
+                        <img src="/assets/storage/teams/${team.id}.png"
                             onerror="this.onerror=null; this.style.display='none';"
                             alt="${escapeHtml(team.name)}">
                     </div>
@@ -496,7 +496,7 @@
     }
 
     function getTeamLogo(name) {
-        return `/assets/img/teams/${name.toLowerCase().replace(/\s+/g, '_')}_logo.png`;
+        return `/assets/storage/teams/${name.toLowerCase().replace(/\s+/g, '_')}_logo.png`;
     }
 
     function goToPlayer(id) {
