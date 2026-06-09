@@ -6,6 +6,17 @@ const Team = require('../models/teams.model');
 //const TEAMS_DIR = path.resolve(__dirname, '..', 'public', 'assets', 'img', 'teams');
 const TEAMS_DIR = path.resolve(process.env.STORAGE_PATH, 'teams');
 
+/**
+ * Sposta un file anche tra filesystem diversi.
+ * fs.renameSync fallisce con EXDEV quando origine (cartella temp di multer)
+ * e destinazione (volume montato STORAGE_PATH) sono su device diversi:
+ * qui copiamo i dati e poi rimuoviamo il temporaneo.
+ */
+function moveFileSync(src, dest) {
+  fs.copyFileSync(src, dest);
+  fs.unlinkSync(src);
+}
+
 function normalizeTeamName(name) {
   return String(name || '')
     .toLowerCase()
@@ -111,7 +122,7 @@ async function uploadTeamLogo(req, res) {
     const fileName    = `${normalizeTeamName(team.name)}_logo.png`;
     const destination = safeTeamPath(fileName);
 
-    fs.renameSync(req.file.path, destination);
+    moveFileSync(req.file.path, destination);
     res.json({ success: true, fileName });
 
   } catch (err) {
@@ -138,7 +149,7 @@ async function uploadTeamPhoto(req, res) {
     const fileName    = `${numericId}.png`;
     const destination = safeTeamPath(fileName);
 
-    fs.renameSync(req.file.path, destination);
+    moveFileSync(req.file.path, destination);
     res.json({ success: true, fileName });
 
   } catch (err) {
