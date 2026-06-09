@@ -17,6 +17,10 @@ const upload = multer({
 // ── Sessione ──────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(express.json({
+  verify: (req, res, buf) => { req.rawBody = buf; }   // Buffer of the exact bytes
+}));
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -46,13 +50,13 @@ app.get('/', (req, res) => {
 });
 
 // ── Webhook GitHub ────────────────────────────────────────────────────────
-app.post('/HD07hVNDe7vAt2oe', async (req, res) => {   // FIX: async per await (S6544)
+app.post('/HD07hVNDe7vAt2oe', async (req, res) => {
   const secret = process.env.SECRET;
   const head   = req.headers['x-hub-signature-256'];
 
   if (!head) return res.status(400).send('Signature not provided');
 
-  const valid = await verifySignature(secret, head, req); // FIX: await la Promise (S6544)
+  const valid = await verifySignature(secret, head, req.rawBody); // pass raw bytes
   if (!valid)  return res.status(401).send('Invalid signature');
 
   res.status(200).send('Webhook received');
@@ -62,13 +66,14 @@ app.post('/HD07hVNDe7vAt2oe', async (req, res) => {   // FIX: async per await (S
 // ── Signature helpers ─────────────────────────────────────────────────────
 const encoder = new TextEncoder();
 
-async function verifySignature(secret, header, payload) {
-  const [, sigHex]  = header.split('=');
-  const algorithm   = { name: 'HMAC', hash: { name: 'SHA-256' } };
-  const key         = await crypto.subtle.importKey(
+async function verifySignature(secret, header, rawBody) {
+  const [, sigHex] = header.split('=');
+  const algorithm  = { name: 'HMAC', hash: { name: 'SHA-256' } };
+  const key = await crypto.subtle.importKey(
     'raw', encoder.encode(secret), algorithm, false, ['sign', 'verify']
   );
-  return crypto.subtle.verify(algorithm.name, key, hexToBytes(sigHex), encoder.encode(payload));
+  // rawBody is already a Buffer (a Uint8Array), pass it directly — do NOT re-encode it
+  return crypto.subtle.verify(algorithm.name, key, hexToBytes(sigHex), rawBody);
 }
 
 function hexToBytes(hex) {
