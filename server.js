@@ -17,14 +17,19 @@ const upload = multer({
 // ── Sessione ──────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1); // necessario perché secure:true funzioni dietro proxy
+}
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // FIX: secure:true in prod (S2092)
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'strict'
+    sameSite: 'strict',
+    maxAge: 1000 * 60 * 60 * 24 // opzionale: durata esplicita (qui 24h)
   }
 }));
 
