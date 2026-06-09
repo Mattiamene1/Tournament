@@ -3,7 +3,8 @@ const path = require('node:path');
 const Team = require('../models/teams.model');
 
 // Cartella base per le immagini delle squadre
-const TEAMS_DIR = path.resolve(__dirname, '..', 'public', 'assets', 'img', 'teams');
+//const TEAMS_DIR = path.resolve(__dirname, '..', 'public', 'assets', 'img', 'teams');
+const TEAMS_DIR = path.resolve(process.env.STORAGE_PATH, 'teams');
 
 function normalizeTeamName(name) {
   return String(name || '')

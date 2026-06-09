@@ -3,8 +3,9 @@ const path = require('node:path');
 const Referee = require('../models/referees.model');
  
 // Cartella base per le foto degli arbitri
-const REFEREES_DIR = path.resolve(__dirname, '..', 'public', 'assets', 'img', 'referees');
- 
+//const REFEREES_DIR = path.resolve(__dirname, '..', 'public', 'assets', 'img', 'referees');
+const REFEREES_DIR = path.resolve(process.env.STORAGE_PATH, 'referees');
+
 /**
  * Valida che l'ID sia un intero positivo e che il path finale
  * sia dentro la cartella attesa (prevenzione path traversal).

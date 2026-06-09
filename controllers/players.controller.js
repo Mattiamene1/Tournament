@@ -3,8 +3,8 @@ const path = require('node:path');
 const Player = require('../models/players.model');
  
 // Cartella base per le foto dei giocatori
-const PLAYERS_DIR = path.resolve(__dirname, '..', 'public', 'assets', 'img', 'players');
- 
+//const PLAYERS_DIR = path.resolve(__dirname, '..', 'public', 'assets', 'img', 'players');
+const PLAYERS_DIR = path.resolve(process.env.STORAGE_PATH, 'players');
 /**
  * Valida che l'ID sia un intero positivo e che il path finale
  * sia dentro la cartella attesa (prevenzione path traversal).
