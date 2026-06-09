@@ -46,39 +46,70 @@ app.get('/', (req, res) => {
 });
 
 // ── Webhook GitHub ────────────────────────────────────────────────────────
-app.post('/HD07hVNDe7vAt2oe', async (req, res) => {
-  const secret = process.env.SECRET;
-  const head   = req.headers['x-hub-signature-256'];
+app.post('/HD07hVNDe7vAt2oe', (req, res) => {
+    
+    const secret = 'hacktheworld'; // Retrieve this from your environment or conf
+    //const head = req.headers['X-Hub-Signature-256'];
+    const head = req.headers['x-hub-signature-256'];
+    if (!head) {
+        return res.status(400).send('Signature not provided');
+    }
+    if (!verifySignature(secret, head, req)) {
+        return res.status(401).send('Invalid signature');
+    }
+    // If the signature is valid, proceed with processing the webhook payload
+    // Your webhook handling logic goes here
+    res.status(200).send('Webhook received');
 
-  if (!head) return res.status(400).send('Signature not provided');
-
-  const valid = await verifySignature(secret, head, req.rawBody); // pass raw bytes
-  if (!valid)  return res.status(401).send('Invalid signature');
-
-  res.status(200).send('Webhook received');
-  setTimeout(() => process.exit(111), 2000);
+    setTimeout(() => {
+        process.exit(111); // Exit with 111 code
+    }, 2000);
 });
 
-// ── Signature helpers ─────────────────────────────────────────────────────
-const encoder = new TextEncoder();
+let encoder = new TextEncoder();
+async function verifySignature(secret, header, payload) {
+    let parts = header.split("=");
+    let sigHex = parts[1];
 
-async function verifySignature(secret, header, rawBody) {
-  const [, sigHex] = header.split('=');
-  const algorithm  = { name: 'HMAC', hash: { name: 'SHA-256' } };
-  const key = await crypto.subtle.importKey(
-    'raw', encoder.encode(secret), algorithm, false, ['sign', 'verify']
-  );
-  // rawBody is already a Buffer (a Uint8Array), pass it directly — do NOT re-encode it
-  return crypto.subtle.verify(algorithm.name, key, hexToBytes(sigHex), rawBody);
+    let algorithm = { name: "HMAC", hash: { name: 'SHA-256' } };
+
+    let keyBytes = encoder.encode(secret);
+    let extractable = false;
+    let key = await crypto.subtle.importKey(
+        "raw",
+        keyBytes,
+        algorithm,
+        extractable,
+        [ "sign", "verify" ],
+    );
+
+    let sigBytes = hexToBytes(sigHex);
+    let dataBytes = encoder.encode(payload);
+    let equal = await crypto.subtle.verify(
+        algorithm.name,
+        key,
+        sigBytes,
+        dataBytes,
+    );
+
+    return equal;
 }
 
 function hexToBytes(hex) {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = Number.parseInt(hex.slice(i, i + 2), 16); // FIX: Number.parseInt (S7773)
-  }
-  return bytes;
+    let len = hex.length / 2;
+    let bytes = new Uint8Array(len);
+
+    let index = 0;
+    for (let i = 0; i < hex.length; i += 2) {
+        let c = hex.slice(i, i + 2);
+        let b = parseInt(c, 16);
+        bytes[index] = b;
+        index += 1;
+    }
+
+    return bytes;
 }
+
 
 // ── Avvio ─────────────────────────────────────────────────────────────────
 app.listen(3000, () => {
