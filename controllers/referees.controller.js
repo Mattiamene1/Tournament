@@ -1,10 +1,21 @@
 const fs   = require('node:fs');
 const path = require('node:path');
 const Referee = require('../models/referees.model');
- 
+
 // Cartella base per le foto degli arbitri
 //const REFEREES_DIR = path.resolve(__dirname, '..', 'public', 'assets', 'img', 'referees');
 const REFEREES_DIR = path.resolve(process.env.STORAGE_PATH, 'referees');
+
+/**
+ * Sposta un file anche tra filesystem diversi.
+ * fs.renameSync fallisce con EXDEV quando origine (cartella temp di multer)
+ * e destinazione (volume montato STORAGE_PATH) sono su device diversi:
+ * qui copiamo i dati e poi rimuoviamo il temporaneo.
+ */
+function moveFileSync(src, dest) {
+  fs.copyFileSync(src, dest);
+  fs.unlinkSync(src);
+}
 
 /**
  * Valida che l'ID sia un intero positivo e che il path finale
@@ -15,16 +26,16 @@ function safeRefereePath(id) {
   if (!Number.isInteger(numericId) || numericId <= 0) {
     throw new Error('ID non valido');
   }
- 
+
   const dest = path.resolve(REFEREES_DIR, `${numericId}.png`);
- 
+
   if (!dest.startsWith(REFEREES_DIR + path.sep)) {
     throw new Error('Path non consentito');
   }
- 
+
   return dest;
 }
- 
+
 async function createReferee(req, res) {
   try {
     const id = await Referee.createReferee(req.body);
@@ -33,7 +44,7 @@ async function createReferee(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
- 
+
 async function getReferees(req, res) {
   try {
     const referees = await Referee.getReferees({ active: req.query.active });
@@ -42,7 +53,7 @@ async function getReferees(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
- 
+
 async function getRefereeById(req, res) {
   try {
     const referee = await Referee.getRefereeById(req.params.id);
@@ -52,7 +63,7 @@ async function getRefereeById(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
- 
+
 async function updateReferee(req, res) {
   try {
     await Referee.updateReferee(req.params.id, req.body);
@@ -61,28 +72,28 @@ async function updateReferee(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
- 
+
 async function uploadRefereePhoto(req, res) {
   try {
     const referee = await Referee.getRefereeById(req.params.id);
     if (!referee) return res.status(404).json({ error: 'Referee not found' });
     if (!req.file) return res.status(400).json({ error: 'File mancante' });
- 
+
     if (!fs.existsSync(REFEREES_DIR)) {
       fs.mkdirSync(REFEREES_DIR, { recursive: true });
     }
- 
+
     const destination = safeRefereePath(req.params.id);
-    fs.renameSync(req.file.path, destination);
- 
+    moveFileSync(req.file.path, destination);
+
     res.json({ success: true, fileName: path.basename(destination) });
- 
+
   } catch (err) {
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ error: err.message });
   }
 }
- 
+
 async function deleteReferee(req, res) {
   try {
     await Referee.deleteReferee(req.params.id);
@@ -91,7 +102,7 @@ async function deleteReferee(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
- 
+
 module.exports = {
   createReferee,
   getReferees,
@@ -100,4 +111,3 @@ module.exports = {
   uploadRefereePhoto,
   deleteReferee
 };
- 
