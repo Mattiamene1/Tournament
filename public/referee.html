@@ -15,6 +15,45 @@
 
   <link rel="stylesheet" href="./custom.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    /* Controllo per caricare/cambiare la foto, sovrapposto all'immagine */
+    .player-image { position: relative; }
+    .change-photo-btn {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 18px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, .82);
+      color: #fff;
+      font-family: 'Barlow', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, .25);
+      transition: background .18s ease, transform .18s ease;
+    }
+    .change-photo-btn:hover {
+      background: #1d4ed8;
+      transform: translateX(-50%) translateY(-2px);
+    }
+    .change-photo-btn:focus-visible {
+      outline: 2px solid #facc15;
+      outline-offset: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .change-photo-btn { transition: none; }
+      .change-photo-btn:hover { transform: translateX(-50%); }
+    }
+  </style>
 </head>
 
 <body class="bg-slate-50">
@@ -27,6 +66,7 @@
 
 <script>
   let logged = false;
+  let cacheBust = '';                // aggiornato dopo un upload per evitare cache
   const params     = new URLSearchParams(window.location.search);
   const refereeId  = params.get('id');
 
@@ -121,14 +161,11 @@
 
           <div class="player-image" id="referee-image-box">
             <img
-              src="/assets/storage/referees/${r.id}.png"
+              id="referee-photo"
+              src="/assets/storage/referees/${r.id}.png${cacheBust}"
               alt="${r.first_name} ${r.last_name}"
-              onerror="
-                this.onerror=null;
-                ${logged
-                  ? `showUploadRefereePhotoButton(${r.id})`
-                  : `this.src='/assets/storage/players/default.png'`};
-              "
+              onload="onPhotoLoaded()"
+              onerror="onPhotoError()"
             >
           </div>
 
@@ -142,14 +179,32 @@
     }
   }
 
-  function showUploadRefereePhotoButton(id) {
+  // Foto presente e caricata correttamente → se loggato, mostra "Cambia foto"
+  function onPhotoLoaded() {
+    if (logged) addPhotoButton('Cambia foto');
+  }
+
+  // Foto mancante → fallback al default e, se loggato, mostra "Carica foto"
+  function onPhotoError() {
+    const img = document.getElementById('referee-photo');
+    if (img) {
+      img.onerror = null;
+      img.src = '/assets/storage/players/default.png';
+    }
+    if (logged) addPhotoButton('Carica foto');
+  }
+
+  // Inserisce (una sola volta) il pulsante sovrapposto all'immagine
+  function addPhotoButton(label) {
     const box = document.getElementById('referee-image-box');
-    box.innerHTML = `
-      <button class="upload-player-photo-btn" onclick="uploadRefereePhoto(${id})">
-        <i class="fa-solid fa-upload"></i>
-        Carica foto arbitro
-      </button>
-    `;
+    if (!box || box.querySelector('.change-photo-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'change-photo-btn';
+    btn.type = 'button';
+    btn.innerHTML = `<i class="fa-solid fa-camera"></i><span>${label}</span>`;
+    btn.addEventListener('click', () => uploadRefereePhoto(refereeId));
+    box.appendChild(btn);
   }
 
   async function uploadRefereePhoto(id) {
@@ -169,6 +224,8 @@
       });
 
       if (!res.ok) { alert('Errore caricamento foto'); return; }
+
+      cacheBust = `?t=${Date.now()}`;   // forza il refresh dell'immagine
       await loadReferee();
     };
     input.click();
