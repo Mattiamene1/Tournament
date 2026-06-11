@@ -53,6 +53,32 @@
       .change-photo-btn { transition: none; }
       .change-photo-btn:hover { transform: translateX(-50%); }
     }
+
+    /* Lista partite arbitrate scrollabile: occupa lo spazio che resta dentro la card */
+    .matches-scroll {
+      flex: 1 1 auto;
+      min-height: 0;          /* indispensabile perché lo scroll funzioni dentro un flex */
+      overflow-y: auto;
+      padding-right: 8px;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+      /* Firefox */
+      scrollbar-width: thin;
+      scrollbar-color: rgba(15, 23, 42, .25) transparent;
+    }
+    .matches-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .matches-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .matches-scroll::-webkit-scrollbar-thumb {
+      background: rgba(15, 23, 42, .22);
+      border-radius: 999px;
+    }
+    .matches-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(15, 23, 42, .38);
+    }
   </style>
 </head>
 
@@ -133,27 +159,29 @@
             </div>
 
             ${refereedMatches.length ? `
-              <div style="margin-top: 16px;">
-                  <h3 style="font-size:16px; opacity:.6; text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+              <div style="margin: 16px 0 0; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;">
+                  <h3 style="font-size:16px; opacity:.6; text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; flex:0 0 auto;">
                     <img src="/assets/svg/whistle.svg" style="width:28px; height:28px; filter:invert(1); opacity:.7;">
                     Partite Arbitrate (${refereedMatches.length})
                   </h3>
-                ${refereedMatches.map(m => `
-                  <div class="player-link"
-                       onclick="window.location.href='match.html?id=${m.id}'"
-                       style="display:flex; align-items:center; justify-content:space-between;
-                              padding:8px 0; border-bottom:1px solid rgba(255,255,255,.08);
-                              font-size:14px;">
-                    <span style="opacity:.7;">${formatDate(m.match_date)}</span>
-                    <span>
-                      ${formatTeamName(m.home_team_name)}
-                      <strong style="color:#facc15; margin:0 6px;">
-                        ${m.status !== 'scheduled' ? `${m.home_score ?? 0} - ${m.away_score ?? 0}` : 'vs'}
-                      </strong>
-                      ${formatTeamName(m.away_team_name)}
-                    </span>
-                  </div>
-                `).join('')}
+                <div class="matches-scroll">
+                  ${refereedMatches.map(m => `
+                    <div class="player-link"
+                         onclick="window.location.href='match.html?id=${m.id}'"
+                         style="display:flex; align-items:center; justify-content:space-between;
+                                padding:8px 0; border-bottom:1px solid rgba(255,255,255,.08);
+                                font-size:14px;">
+                      <span style="opacity:.7;">${formatDate(m.match_date)}</span>
+                      <span>
+                        ${formatTeamName(m.home_team_name)}
+                        <strong style="color:#facc15; margin:0 6px;">
+                          ${m.status !== 'scheduled' ? `${m.home_score ?? 0} - ${m.away_score ?? 0}` : 'vs'}
+                        </strong>
+                        ${formatTeamName(m.away_team_name)}
+                      </span>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
             ` : ''}
 

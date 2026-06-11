@@ -115,7 +115,7 @@
             <h1>${p.first_name} ${p.last_name}</h1>
 
             <div class="player-meta">
-              <div class="team-box">
+              <div class="team-box team-link" onclick="goToTeam(${team.id})" title="Vai alla squadra">
                 <img src="/assets/storage/teams/${team.name.toLowerCase().replace(/\s+/g,'_')}_logo.png"
                     alt="${team.name}">
                 <span>${team.name}</span>
@@ -213,6 +213,11 @@
     btn.innerHTML = `<i class="fa-solid fa-camera"></i><span>${label}</span>`;
     btn.addEventListener('click', () => uploadPlayerPhoto(playerId));
     box.appendChild(btn);
+  }
+
+  function goToTeam(id) {
+    if (id === undefined || id === null) return;
+    window.location.href = `team.html?id=${id}`;
   }
 
   function renderStars(rating) {
