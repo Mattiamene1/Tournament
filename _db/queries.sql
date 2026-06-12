@@ -109,6 +109,9 @@ ALTER TABLE matches ADD COLUMN home_score INT DEFAULT 0;
 ALTER TABLE matches ADD COLUMN away_score INT DEFAULT 0;
 ALTER TABLE matches ADD COLUMN started_at DATETIME NULL,
 ALTER TABLE matches ADD COLUMN ended_at DATETIME NULL;
+ALTER TABLE matches
+  ADD COLUMN round VARCHAR(16) NULL DEFAULT NULL,
+  ADD COLUMN slot  VARCHAR(16) NULL DEFAULT NULL;
 /*--------------------------------------*/
 
 CREATE TABLE bonuses (

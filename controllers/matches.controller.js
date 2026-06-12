@@ -125,11 +125,122 @@ async function updateShootoutScore(req, res) {
   }
 }
 
+/* Aggiunge un tiro dello shootout (giocatore + esito) */
+async function addShootoutKick(req, res) {
+  try {
+    const { team_id, player_id, scored } = req.body;
+    if (team_id === undefined || team_id === null) {
+      return res.status(400).json({ error: 'team_id mancante' });
+    }
+    await Match.addShootoutKick(
+      req.params.id,
+      Number(team_id),
+      player_id ? Number(player_id) : null,
+      scored === true || scored === 'true' || scored === 1 || scored === '1'
+    );
+    const summary = await Match.getShootoutSummary(req.params.id);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({ success: true, match: updatedMatch, summary });
+  } catch (err) {
+    // errori di stato/validazione → 400
+    res.status(400).json({ error: err.message });
+  }
+}
+
+/* Rimuove un tiro dello shootout */
+async function removeShootoutKick(req, res) {
+  try {
+    await Match.removeShootoutKick(req.params.id, req.params.eventId);
+    const summary = await Match.getShootoutSummary(req.params.id);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({ success: true, match: updatedMatch, summary });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function finishShootout(req, res) {
   try {
     await Match.finishShootout(req.params.id);
     const updatedMatch = await Match.getMatchById(req.params.id);
     res.json({ success: true, match: updatedMatch });
+  } catch (err) {
+    // pareggio / tentativi diversi → 400 con messaggio
+    res.status(400).json({ error: err.message });
+  }
+}
+
+/* ============================================================
+   FASE FINALE — TABELLONE
+============================================================ */
+
+/* Estrae i parametri opzionali (data/campo/arbitro) dal body */
+function finalsOpts(body = {}) {
+  return {
+    match_date: body.match_date || null,
+    pitch_id:   body.pitch_id || null,
+    referee_id: body.referee_id || null
+  };
+}
+
+/* POST /matches/finals/quarters  → "chiudi gironi e genera quarti" */
+async function generateQuarterfinals(req, res) {
+  try {
+    const result = await Match.generateQuarterfinals(finalsOpts(req.body));
+    if (result.reason === 'already_exists') {
+      return res.status(409).json({ success: false, error: 'I quarti sono già stati generati.' });
+    }
+    res.status(201).json({ success: true, created: result.created });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ success: false, error: err.message });
+  }
+}
+
+/* POST /matches/finals/semifinals */
+async function generateSemifinals(req, res) {
+  try {
+    const result = await Match.generateSemifinals(finalsOpts(req.body));
+    if (result.reason === 'already_exists') {
+      return res.status(409).json({ success: false, error: 'Le semifinali sono già state generate.' });
+    }
+    res.status(201).json({ success: true, created: result.created });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ success: false, error: err.message });
+  }
+}
+
+/* POST /matches/finals/finals  → finale + finalina 3°/4° */
+async function generateFinals(req, res) {
+  try {
+    const result = await Match.generateFinals(finalsOpts(req.body));
+    if (result.reason === 'already_exists') {
+      return res.status(409).json({ success: false, error: 'Finale e finalina sono già state generate.' });
+    }
+    res.status(201).json({ success: true, created: result.created });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ success: false, error: err.message });
+  }
+}
+
+/* DELETE /matches/finals  → svuota tutto il tabellone */
+async function resetKnockout(req, res) {
+  try {
+    const deleted = await Match.deleteKnockoutMatches();
+    res.json({ success: true, deleted });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/* GET /matches/meta/pitches  → elenco campi da gioco */
+async function getPitches(req, res) {
+  try {
+    const pitches = await Match.getPitches();
+    res.json(pitches);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -147,5 +258,16 @@ module.exports = {
   endFirstHalf,
   startSecondHalf,
   updateShootoutScore,
-  finishShootout
+  finishShootout,
+  addShootoutKick,
+  removeShootoutKick,
+
+  // Fase finale
+  generateQuarterfinals,
+  generateSemifinals,
+  generateFinals,
+  resetKnockout,
+
+  // Campi
+  getPitches
 };

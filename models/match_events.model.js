@@ -14,12 +14,13 @@ async function createMatchEvent(data) {
       goal_type,
       card_type,
       bonus_id,
+      bonus_outcome,
       event_value,
       minute,
       extra_minute,
       notes
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const params = [
@@ -31,7 +32,8 @@ async function createMatchEvent(data) {
     data.goal_type || null,
     data.card_type || null,
     data.bonus_id || null,
-    data.event_value || 1,
+    data.bonus_outcome || null,
+    data.event_value ?? 1,
     data.minute,
     data.extra_minute || null,
     data.notes || null
@@ -150,6 +152,7 @@ async function updateMatchEvent(id, data) {
       event_type = ?,
       goal_type = ?,
       card_type = ?,
+      bonus_outcome = ?,
       event_value = ?,
       bonus_id = ?,
       minute = ?,
@@ -166,6 +169,7 @@ async function updateMatchEvent(id, data) {
     data.event_type,
     data.goal_type || null,
     data.card_type || null,
+    data.bonus_outcome || null,
     data.event_value ?? 1,
     data.bonus_id || null,
     data.minute || null,

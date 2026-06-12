@@ -17,36 +17,17 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
   <style>
-    /* ── Finals page ─────────────────────────────────── */
     .finals-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 16px;
-      margin-bottom: 32px;
+      margin-bottom: 16px;
     }
     .finals-header h1 { margin: 0; }
 
-    /* Freeze controls */
-    .freeze-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-
-    .btn-freeze {
-      border: none;
-      border-radius: 10px;
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: .2s;
-      font-family: 'Barlow', sans-serif;
-    }
-    .btn-freeze.frozen { background: #16a34a; color: #fff; }
-    .btn-freeze.open   { background: #facc15; color: #0f172a; }
-    .btn-freeze:hover  { opacity: .88; transform: scale(1.02); }
+    .admin-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
     .btn-simulate {
       border: none;
@@ -64,25 +45,19 @@
       font-family: 'Barlow', sans-serif;
     }
     .btn-simulate:hover { background: #1e293b; transform: scale(1.02); }
+    .btn-simulate:disabled { opacity: .5; cursor: not-allowed; transform: none; background: #475569; }
     .btn-simulate.btn-reset { background: #ef4444; color: #fff; }
     .btn-simulate.btn-reset:hover { background: #dc2626; }
 
-    /* Freeze status chips */
-    .freeze-status { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-
-    .freeze-chip {
-      padding: 5px 13px;
-      border-radius: 20px;
-      font-size: 12px;
+    .bracket-status {
+      margin: 0 0 20px;
+      font-size: 13px;
       font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .05em;
     }
-    .freeze-chip.frozen { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
-    .freeze-chip.open   { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
 
-    /* ── Bracket layout ──────────────────────────────── */
     .bracket-wrapper { overflow-x: auto; padding-bottom: 24px; }
 
     .bracket {
@@ -103,7 +78,6 @@
     .col-conn-r1   { display: flex; flex-direction: column; gap: 24px; align-items: center; justify-content: center; }
     .col-sf-right  { display: flex; flex-direction: column; gap: 24px; }
 
-    /* ── Match box — dark blue theme ────────────────── */
     .match-box {
       background: #0f172a;
       border-radius: 12px;
@@ -121,19 +95,6 @@
     .match-box.live     { border-color: #ef4444; box-shadow: 0 0 16px rgba(239,68,68,.2); }
     .match-box.finished { border-color: #16a34a; }
 
-    /* QF box — same dark blue, dashed border */
-    .match-box.qf-box {
-      background: #0f172a;
-      border: 1.5px dashed #334155;
-      cursor: default;
-    }
-    .match-box.qf-box:hover {
-      border-color: #facc15;
-      border-style: dashed;
-      transform: none;
-      box-shadow: 0 4px 16px rgba(0,0,0,.2);
-    }
-
     .match-box-label {
       font-size: 10px;
       text-transform: uppercase;
@@ -143,7 +104,6 @@
       margin-bottom: 10px;
     }
 
-    /* Team row — white pill */
     .match-box-team {
       display: flex;
       align-items: center;
@@ -191,9 +151,8 @@
       font-style: italic;
       font-weight: 400;
     }
-    .match-box-team.placeholder-team .team-name { color: #475569; }
+    .match-box-team.placeholder-team .team-name { color: #94a3b8; }
 
-    /* Status badge */
     .match-status-badge {
       position: absolute;
       top: 8px; right: 10px;
@@ -205,18 +164,17 @@
     }
     .badge-live      { background: #ef4444; color: #fff; }
     .badge-finished  { background: #16a34a; color: #fff; }
-    .badge-scheduled { background: #1e293b; color: #64748b; }
+    .badge-scheduled { background: #1e293b; color: #94a3b8; }
 
-    /* ── Center boxes ───────────────────────────────── */
     .final-box {
       background: #0f172a;
       border: 2px solid #facc15;
       border-radius: 14px;
-      padding: 14px 14px;
+      padding: 14px;
       width: 210px;
       text-align: center;
       box-shadow: 0 0 28px rgba(250,204,21,.2);
-      cursor: pointer;
+      position: relative;
     }
     .final-box .match-box-label { color: #facc15; font-size: 11px; }
     .final-box .match-box-team  { text-align: left; }
@@ -225,14 +183,15 @@
       background: #0f172a;
       border: 1.5px solid #334155;
       border-radius: 14px;
-      padding: 14px 14px;
+      padding: 14px;
       width: 210px;
       text-align: center;
       box-shadow: 0 4px 16px rgba(0,0,0,.2);
+      position: relative;
     }
     .third-box .match-box-label { color: #64748b; font-size: 11px; }
+    .third-box .match-box-team  { text-align: left; }
 
-    /* Connector SVG */
     .connector { width: 60px; }
 
     @media (max-width: 768px) {
@@ -265,12 +224,10 @@
 
   <div class="finals-header">
     <h1>🏆 Tabellone Finale</h1>
-    <div class="freeze-bar" id="freeze-bar">
-      <!-- populated by JS -->
-    </div>
+    <div class="admin-bar" id="admin-bar"></div>
   </div>
 
-  <div class="freeze-status" id="freeze-status"></div>
+  <div class="bracket-status" id="bracket-status"></div>
 
   <div class="bracket-wrapper">
     <div class="bracket" id="bracket">
@@ -284,30 +241,23 @@
 /* ═══════════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════════ */
-let logged       = false;
-let allMatches   = [];
-let allTeams     = [];
-let allGroups    = [];         // [{name, teams: [{id,name,points,...}]}]
-let frozenGroups = {};         // { groupName: [ sorted team objects ] }
-let finalsMatches = [];        // matches without group_id
-let simulated    = false;      // true solo dopo aver premuto Simula
+let logged     = false;
+let allMatches = [];
+let knockout   = [];   // solo partite del tabellone (round valorizzato)
 
-/* slot mapping for 2 groups A/B:
-   SF1 = 2°B vs 3°A   (left)
-   SF2 = 1°A vs 4°B   (left)
-   SF3 = 2°A vs 3°B   (right)
-   SF4 = 1°B vs 4°A   (right)
-*/
-const SF_SLOTS = [
-  { id: 'sf1', label: 'Semifinale 1', side: 'left',  home: {g:1, pos:1}, away: {g:0, pos:2} },  // 2°B vs 3°A  → home=2°B away=3°A
-  { id: 'sf2', label: 'Semifinale 2', side: 'left',  home: {g:0, pos:0}, away: {g:1, pos:3} },  // 1°A vs 4°B
-  { id: 'sf3', label: 'Semifinale 3', side: 'right', home: {g:0, pos:1}, away: {g:1, pos:2} },  // 2°A vs 3°B
-  { id: 'sf4', label: 'Semifinale 4', side: 'right', home: {g:1, pos:0}, away: {g:0, pos:3} },  // 1°B vs 4°A
+/* Configurazione del tabellone (etichette + placeholder) */
+const QF = [
+  { slot: 'QF1', label: 'Quarto 1', home: '1° Girone A', away: '4° Girone B' },
+  { slot: 'QF2', label: 'Quarto 2', home: '2° Girone B', away: '3° Girone A' },
+  { slot: 'QF3', label: 'Quarto 3', home: '1° Girone B', away: '4° Girone A' },
+  { slot: 'QF4', label: 'Quarto 4', home: '2° Girone A', away: '3° Girone B' },
 ];
-
-const FINALS_DATE    = '2026-07-04T14:00:00';
-const FINALS_PITCH   = 1;
-const FINALS_REFEREE = 1;
+const SF = [
+  { slot: 'SF1', label: 'Semifinale 1', home: 'Vincente Quarto 1', away: 'Vincente Quarto 2' },
+  { slot: 'SF2', label: 'Semifinale 2', home: 'Vincente Quarto 3', away: 'Vincente Quarto 4' },
+];
+const FINAL = { slot: 'FINAL', label: '🏆 Finale',        home: 'Vincente Semifinale 1', away: 'Vincente Semifinale 2' };
+const THIRD = { slot: 'THIRD', label: '🥉 Finale 3°/4°',  home: 'Perdente Semifinale 1', away: 'Perdente Semifinale 2' };
 
 /* ═══════════════════════════════════════════════════
    BOOT
@@ -315,9 +265,7 @@ const FINALS_REFEREE = 1;
 (async () => {
   await checkAuth();
   await loadData();
-  renderFreezeBar();
-  renderFreezeStatus();
-  renderBracket();   // parte vuoto — frozenGroups è {} di default
+  renderAll();
 })();
 
 async function checkAuth() {
@@ -329,436 +277,220 @@ async function checkAuth() {
 }
 
 async function loadData() {
-  const [matchesRes, teamsRes] = await Promise.all([
-    fetch('/matches'),
-    fetch('/teams')
-  ]);
-  allMatches = await matchesRes.json();
-  allTeams   = await teamsRes.json();
+  const res = await fetch('/matches');
+  allMatches = await res.json();
+  knockout   = allMatches.filter(m => m.round);   // round valorizzato = tabellone
+}
 
-  // Build standings per group
-  allGroups = buildGroupStandings(allTeams, allMatches);
-
-  // Load frozen state from localStorage
-  const saved = localStorage.getItem('wildcard_frozen_groups');
-  if (saved) frozenGroups = JSON.parse(saved);
-
-  // Finals = matches without group_id or with group_name containing 'final'/'semifinal'
-  finalsMatches = allMatches.filter(m =>
-    !m.group_id ||
-    (m.group_name && /final|semi/i.test(m.group_name))
-  );
+function renderAll() {
+  renderControls();
+  renderBracket();
 }
 
 /* ═══════════════════════════════════════════════════
-   STANDINGS BUILDER  (reuse logic from standing.html)
+   CONTROLLI ADMIN
 ═══════════════════════════════════════════════════ */
-function buildGroupStandings(teams, matches) {
-  const table = {};
+function renderControls() {
+  const bar      = document.getElementById('admin-bar');
+  const statusEl = document.getElementById('bracket-status');
 
-  matches.forEach(m => {
-    const g = m.group_name;
-    if (!g) return;
+  const quarters = knockout.filter(m => m.round === 'quarter');
+  const semis    = knockout.filter(m => m.round === 'semi');
+  const finals   = knockout.filter(m => m.round === 'final' || m.round === 'third');
+  const allDone  = arr => arr.length > 0 && arr.every(m => m.status === 'finished');
 
-    if (!table[g]) table[g] = {};
-    ensureTeam(table[g], m.home_team_id, m.home_team_name);
-    ensureTeam(table[g], m.away_team_id, m.away_team_name);
+  let phase = 'Tabellone non ancora generato';
+  if (finals.length)        phase = 'Finali generate';
+  else if (semis.length)    phase = 'Semifinali generate — completa per la finale';
+  else if (quarters.length) phase = 'Quarti generati — completa per le semifinali';
+  statusEl.textContent = phase;
 
-    if (m.status !== 'finished') return;
+  if (!logged) { bar.innerHTML = ''; return; }
 
-    const home = table[g][m.home_team_id];
-    const away = table[g][m.away_team_id];
-    const hs = Number(m.home_score || 0);
-    const as = Number(m.away_score || 0);
+  let btns = '';
 
-    home.played++; away.played++;
-    home.goalsFor += hs; home.goalsAgainst += as;
-    away.goalsFor += as; away.goalsAgainst += hs;
-
-    if (hs > as)      { home.wins++; home.points += 3; away.losses++; }
-    else if (hs < as) { away.wins++; away.points += 3; home.losses++; }
-    else              { home.draws++; home.points++; away.draws++; away.points++; }
-  });
-
-  return Object.entries(table).map(([name, teamsObj]) => ({
-    name,
-    teams: Object.values(teamsObj)
-      .map(t => ({ ...t, goalDiff: t.goalsFor - t.goalsAgainst }))
-      .sort((a, b) =>
-        b.points - a.points ||
-        b.goalDiff - a.goalDiff ||
-        b.goalsFor - a.goalsFor
-      )
-  })).sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function ensureTeam(g, id, name) {
-  if (!g[id]) g[id] = { id, name, played:0, wins:0, draws:0, losses:0, points:0, goalsFor:0, goalsAgainst:0 };
-}
-
-/* ═══════════════════════════════════════════════════
-   GET TEAM FOR SLOT
-   groups sorted alphabetically → index 0 = Girone A, 1 = Girone B
-═══════════════════════════════════════════════════ */
-function getTeamForSlot(groupIdx, pos) {
-  // Se non è stato premuto Simula, nessuna squadra
-  if (!simulated) return null;
-
-  const groups = allGroups;
-  if (groupIdx >= groups.length) return null;
-
-  const groupName = groups[groupIdx].name;
-  const source    = frozenGroups[groupName] || groups[groupIdx].teams;
-
-  return source[pos] || null;
-}
-
-/* ═══════════════════════════════════════════════════
-   FREEZE / SIMULATE
-═══════════════════════════════════════════════════ */
-function renderFreezeBar() {
-  const bar = document.getElementById('freeze-bar');
-
-  if (!simulated) {
-    // Solo bottone Simula
-    bar.innerHTML = `
-      <button class="btn-simulate" onclick="simulateBracket()">
-        <i class="fa-solid fa-rotate"></i> Simula Tabellone
+  if (quarters.length === 0) {
+    btns += `
+      <button class="btn-simulate" onclick="genQuarters()">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Chiudi gironi e genera quarti
       </button>`;
+  } else if (semis.length === 0) {
+    const ok = quarters.length >= 4 && allDone(quarters);
+    btns += `
+      <button class="btn-simulate" onclick="genSemis()" ${ok ? '' : 'disabled'}
+              title="${ok ? '' : 'Completa tutti i quarti'}">
+        <i class="fa-solid fa-forward"></i> Genera semifinali
+      </button>`;
+  } else if (finals.length === 0) {
+    const ok = semis.length >= 2 && allDone(semis);
+    btns += `
+      <button class="btn-simulate" onclick="genFinals()" ${ok ? '' : 'disabled'}
+              title="${ok ? '' : 'Completa le semifinali'}">
+        <i class="fa-solid fa-trophy"></i> Genera finale e finalina
+      </button>`;
+  }
+
+  if (knockout.length) {
+    btns += `
+      <button class="btn-simulate btn-reset" onclick="resetBracket()">
+        <i class="fa-solid fa-xmark"></i> Svuota tabellone
+      </button>`;
+  }
+
+  bar.innerHTML = btns;
+}
+
+/* ═══════════════════════════════════════════════════
+   AZIONI
+═══════════════════════════════════════════════════ */
+async function genQuarters() { await postFinals('/matches/finals/quarters'); }
+async function genSemis()    { await postFinals('/matches/finals/semifinals'); }
+async function genFinals()   { await postFinals('/matches/finals/finals'); }
+
+async function postFinals(url) {
+  const res  = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok || data.success === false) {
+    alert(data.error || 'Operazione non riuscita');
     return;
   }
 
-  // Dopo simulazione: bottone reset + freeze per admin
-  bar.innerHTML = `
-    <button class="btn-simulate btn-reset" onclick="resetBracket()">
-      <i class="fa-solid fa-xmark"></i> Svuota Tabellone
-    </button>`;
-
-  if (!logged) return;
-
-  allGroups.forEach(g => {
-    const isFrozen = !!frozenGroups[g.name];
-    bar.innerHTML += `
-      <button class="btn-freeze ${isFrozen ? 'frozen' : 'open'}"
-              onclick="toggleFreeze('${g.name}')">
-        <i class="fa-solid fa-${isFrozen ? 'lock' : 'lock-open'}"></i>
-        ${isFrozen ? g.name + ' Congelato' : 'Congela ' + g.name}
-      </button>`;
-  });
-}
-
-async function toggleFreeze(groupName) {
-  if (!logged) return;
-
-  if (frozenGroups[groupName]) {
-    // unfreeze
-    delete frozenGroups[groupName];
-    localStorage.setItem('wildcard_frozen_groups', JSON.stringify(frozenGroups));
-    renderFreezeBar();
-    renderFreezeStatus();
-    renderBracket();
-    return;
-  }
-
-  // Freeze: congela la classifica attuale
-  const group = allGroups.find(g => g.name === groupName);
-  if (!group) return;
-
-  frozenGroups[groupName] = group.teams;
-  localStorage.setItem('wildcard_frozen_groups', JSON.stringify(frozenGroups));
-
-  // Crea partite semifinali nel DB per questo congelamento
-  await createSemifinalMatches();
-
-  renderFreezeBar();
-  renderFreezeStatus();
   await loadData();
-  renderBracket();
+  renderAll();
 }
 
-async function simulateBracket() {
-  // Popola frozenGroups con la classifica live e mostra il tabellone
-  frozenGroups = {};
-  allGroups.forEach(g => { frozenGroups[g.name] = g.teams; });
-  simulated = true;
-  renderFreezeBar();
-  renderFreezeStatus();
-  renderBracket();
-}
+async function resetBracket() {
+  if (!confirm('Svuotare tutto il tabellone? Tutte le partite della fase finale verranno eliminate.')) return;
 
-function resetBracket() {
-  simulated    = false;
-  frozenGroups = {};
-  renderFreezeBar();
-  renderFreezeStatus();
-  renderBracket();
-}
+  const res  = await fetch('/matches/finals', { method: 'DELETE' });
+  const data = await res.json().catch(() => ({}));
 
-function renderFreezeStatus() {
-  const el = document.getElementById('freeze-status');
+  if (!res.ok) { alert(data.error || 'Errore'); return; }
 
-  el.innerHTML = allGroups.map(g => {
-    const isFrozen = !!frozenGroups[g.name] &&
-      localStorage.getItem('wildcard_frozen_groups') &&
-      JSON.parse(localStorage.getItem('wildcard_frozen_groups'))[g.name];
-
-    return `
-      <span class="freeze-chip ${isFrozen ? 'frozen' : 'open'}">
-        <i class="fa-solid fa-${isFrozen ? 'lock' : 'lock-open'}"></i>
-        ${g.name}: ${isFrozen ? 'Congelato' : 'In corso'}
-      </span>
-    `;
-  }).join('');
+  await loadData();
+  renderAll();
 }
 
 /* ═══════════════════════════════════════════════════
-   CREATE SEMIFINAL MATCHES IN DB
+   RENDER BRACKET
 ═══════════════════════════════════════════════════ */
-async function createSemifinalMatches() {
-  // Only create if all groups are frozen
-  const allFrozen = allGroups.every(g => frozenGroups[g.name]);
-  if (!allFrozen) return;
-
-  // Check if already created (look for finals matches)
-  const existing = allMatches.filter(m => !m.group_id);
-  if (existing.length >= SF_SLOTS.length) return; // already created
-
-  for (const slot of SF_SLOTS) {
-    const homeTeam = getTeamForSlot(slot.home.g, slot.home.pos);
-    const awayTeam = getTeamForSlot(slot.away.g, slot.away.pos);
-
-    if (!homeTeam || !awayTeam) continue;
-
-    await fetch('/matches', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        home_team_id: homeTeam.id,
-        away_team_id: awayTeam.id,
-        match_date:   FINALS_DATE,
-        pitch_id:     FINALS_PITCH,
-        referee_id:   FINALS_REFEREE,
-        status:       'scheduled',
-        group_id:     null
-      })
-    });
-  }
-}
-
-/* ═══════════════════════════════════════════════════
-   BRACKET RENDER
-═══════════════════════════════════════════════════ */
-function resolveSFTeams() {
-  return SF_SLOTS.map(slot => ({
-    ...slot,
-    home:  getTeamForSlot(slot.home.g, slot.home.pos),
-    away:  getTeamForSlot(slot.away.g, slot.away.pos),
-    match: findFinalsMatch(slot)
-  }));
-}
-
-function renderBracketLeft(sfLeft) {
-  return `
-    <div class="col-sf-left">${sfLeft.map(sf => renderMatchBox(sf)).join('')}</div>
-    <div class="col-conn-l1">${sfLeft.map(() => renderConnectorRight()).join('')}</div>
-    <div class="col-qf-left">
-      ${renderQFBox('Finale Sinistra', sfLeft[0], sfLeft[1])}
-    </div>
-    <div class="col-conn-l2">${renderConnectorRight()}</div>`;
-}
-
-function renderBracketRight(sfRight) {
-  return `
-    <div class="col-conn-r2">${renderConnectorLeft()}</div>
-    <div class="col-qf-right">
-      ${renderQFBox('Finale Destra', sfRight[0], sfRight[1])}
-    </div>
-    <div class="col-conn-r1">${sfRight.map(() => renderConnectorLeft()).join('')}</div>
-    <div class="col-sf-right">${sfRight.map(sf => renderMatchBox(sf)).join('')}</div>`;
-}
-
-function renderBracketCenter(sfLeft, sfRight) {
-  const finalMatch = finalsMatches.find(m => m.round === 'final') || null;
-  const thirdMatch = finalsMatches.find(m => m.round === 'third') || null;
-  return `
-    <div class="col-center">
-      ${renderCenterBox('🏆 Finale',     finalMatch, sfLeft[0], sfLeft[1], sfRight[0], sfRight[1], true)}
-      ${renderCenterBox('🥉 Terzo Posto', thirdMatch, sfLeft[0], sfLeft[1], sfRight[0], sfRight[1], false)}
-    </div>`;
-}
-
 function renderBracket() {
-  const sfTeams = resolveSFTeams();
-  const sfLeft  = sfTeams.filter(s => s.side === 'left');
-  const sfRight = sfTeams.filter(s => s.side === 'right');
+  document.getElementById('bracket').innerHTML = `
+    <div class="col-sf-left">
+      ${renderBox(QF[0], 'match-box')}
+      ${renderBox(QF[1], 'match-box')}
+    </div>
+    <div class="col-conn-l1">${renderConnectorRight()}${renderConnectorRight()}</div>
 
-  document.getElementById('bracket').innerHTML =
-    renderBracketLeft(sfLeft) +
-    renderBracketCenter(sfLeft, sfRight) +
-    renderBracketRight(sfRight);
-}
+    <div class="col-qf-left">${renderBox(SF[0], 'match-box')}</div>
+    <div class="col-conn-l2">${renderConnectorRight()}</div>
 
-function findFinalsMatch(slot) {
-  // Try to match by teams
-  const h = getTeamForSlot(slot.home.g, slot.home.pos);
-  const a = getTeamForSlot(slot.away.g, slot.away.pos);
-  if (!h || !a) return null;
+    <div class="col-center">
+      ${renderBox(FINAL, 'final-box')}
+      ${renderBox(THIRD, 'third-box')}
+    </div>
 
-  return finalsMatches.find(m =>
-    (String(m.home_team_id) === String(h.id) && String(m.away_team_id) === String(a.id)) ||
-    (String(m.home_team_id) === String(a.id) && String(m.away_team_id) === String(h.id))
-  ) || null;
-}
+    <div class="col-conn-r2">${renderConnectorLeft()}</div>
+    <div class="col-qf-right">${renderBox(SF[1], 'match-box')}</div>
 
-function renderMatchBox(sf) {
-  const hasTeams  = sf.home && sf.away;
-  const hasMatch  = sf.match;
-  const isPlaceholder = !hasTeams;
-
-  const status = hasMatch ? sf.match.status : null;
-
-  const homeScore = hasMatch && status !== 'scheduled' ? sf.match.home_score : null;
-  const awayScore = hasMatch && status !== 'scheduled' ? sf.match.away_score : null;
-
-  const homeWinner = homeScore !== null && awayScore !== null && homeScore > awayScore;
-  const awayWinner = homeScore !== null && awayScore !== null && awayScore > homeScore;
-
-  const onclick = hasMatch
-    ? `onclick="window.location.href='match.html?id=${sf.match.id}'"` : '';
-
-  const badge = status
-    ? `<span class="match-status-badge badge-${status}">${status === 'live' ? '🔴 LIVE' : status === 'finished' ? '✅' : '🕒'}</span>`
-    : '';
-
-  const homeTeamHtml = renderTeamRow(
-    sf.home,
-    homeScore,
-    homeWinner,
-    isPlaceholder ? (sf.label + ' - Casa') : null
-  );
-  const awayTeamHtml = renderTeamRow(
-    sf.away,
-    awayScore,
-    awayWinner,
-    isPlaceholder ? (sf.label + ' - Ospite') : null
-  );
-
-  return `
-    <div class="match-box ${isPlaceholder ? 'placeholder' : ''} ${status || ''}" ${onclick}>
-      ${badge}
-      <div class="match-box-label">${sf.label}</div>
-      ${homeTeamHtml}
-      ${awayTeamHtml}
+    <div class="col-conn-r1">${renderConnectorLeft()}${renderConnectorLeft()}</div>
+    <div class="col-sf-right">
+      ${renderBox(QF[2], 'match-box')}
+      ${renderBox(QF[3], 'match-box')}
     </div>
   `;
 }
 
-function renderTeamRow(team, score, isWinner, placeholderText) {
-  if (!team) {
-    return `<div class="match-box-team placeholder-team">
-      <span class="team-name">${placeholderText || '?'}</span>
+function matchBySlot(slot) {
+  return knockout.find(m => m.slot === slot) || null;
+}
+
+function renderBox(cfg, baseClass) {
+  const m = matchBySlot(cfg.slot);
+  const label = `<div class="match-box-label">${cfg.label}</div>`;
+
+  if (!m) {
+    return `
+      <div class="${baseClass} placeholder">
+        ${label}
+        ${renderTeamRow(null, null, false, cfg.home)}
+        ${renderTeamRow(null, null, false, cfg.away)}
+      </div>`;
+  }
+
+  const showScore = m.status !== 'scheduled';
+  const hs = showScore ? Number(m.home_score || 0) : null;
+  const as = showScore ? Number(m.away_score || 0) : null;
+
+  const wl       = m.status === 'finished' ? winnerLoser(m) : null;
+  const homeWin  = wl && String(wl.winner) === String(m.home_team_id);
+  const awayWin  = wl && String(wl.winner) === String(m.away_team_id);
+
+  return `
+    <div class="${baseClass} ${m.status}" style="cursor:pointer"
+         onclick="window.location.href='match.html?id=${m.id}'">
+      ${statusBadge(m.status)}
+      ${label}
+      ${renderTeamRow(m.home_team_name, hs, homeWin, null)}
+      ${renderTeamRow(m.away_team_name, as, awayWin, null)}
     </div>`;
+}
+
+function renderTeamRow(teamName, score, isWinner, placeholderText) {
+  if (!teamName) {
+    return `
+      <div class="match-box-team placeholder-team">
+        <span class="team-name">${placeholderText || '?'}</span>
+      </div>`;
   }
 
   return `
     <div class="match-box-team ${isWinner ? 'winner' : ''}">
-      <img src="${getTeamLogo(team.name)}" onerror="this.style.display='none'">
-      <span class="team-name">${formatTeamName(team.name)}</span>
+      <img src="${getTeamLogo(teamName)}" onerror="this.style.display='none'">
+      <span class="team-name">${formatTeamName(teamName)}</span>
       ${score !== null ? `<span class="team-score">${score}</span>` : ''}
-    </div>
-  `;
+    </div>`;
 }
 
-function renderQFBox(label, sf1, sf2) {
-  const w1 = getWinner(sf1);
-  const w2 = getWinner(sf2);
-
-  return `
-    <div class="match-box qf-box">
-      <div class="match-box-label">${label}</div>
-      ${renderTeamRow(w1, null, false, 'Vincitore ' + (sf1?.label || ''))}
-      ${renderTeamRow(w2, null, false, 'Vincitore ' + (sf2?.label || ''))}
-    </div>
-  `;
+function statusBadge(status) {
+  if (status === 'live')     return `<span class="match-status-badge badge-live">🔴 LIVE</span>`;
+  if (status === 'finished') return `<span class="match-status-badge badge-finished">✅</span>`;
+  return `<span class="match-status-badge badge-scheduled">🕒</span>`;
 }
 
-function resolveFinalistTeams(sfL1, sfL2, sfR1, sfR2, isFinal) {
-  const pickH = isFinal ? getQFWinner : getQFLoser;
-  const pickA = isFinal ? getQFWinner : getQFLoser;
-  return {
-    h: pickH([sfL1, sfL2]),
-    a: pickA([sfR1, sfR2])
-  };
-}
+/* Vincitore/perdente di una partita (gestisce anche i rigori) */
+function winnerLoser(m) {
+  const hs = Number(m.home_score || 0);
+  const as = Number(m.away_score || 0);
+  if (hs > as) return { winner: m.home_team_id, loser: m.away_team_id };
+  if (as > hs) return { winner: m.away_team_id, loser: m.home_team_id };
 
-function renderCenterBox(label, match, sfL1, sfL2, sfR1, sfR2, isFinal) {
-  const { h, a } = resolveFinalistTeams(sfL1, sfL2, sfR1, sfR2, isFinal);
-  const hScore   = match?.status !== 'scheduled' ? match?.home_score ?? null : null;
-  const aScore   = match?.status !== 'scheduled' ? match?.away_score ?? null : null;
-  const onclick  = match ? `onclick="window.location.href='match.html?id=${match.id}'"` : '';
-  const boxClass = isFinal ? 'final-box' : 'third-box';
-  const hLabel   = isFinal ? 'Vincitore Sinistra' : 'Perdente Sinistra';
-  const aLabel   = isFinal ? 'Vincitore Destra'   : 'Perdente Destra';
+  const hso = Number(m.home_shootout_score || 0);
+  const aso = Number(m.away_shootout_score || 0);
+  if (hso > aso) return { winner: m.home_team_id, loser: m.away_team_id };
+  if (aso > hso) return { winner: m.away_team_id, loser: m.home_team_id };
 
-  return `
-    <div class="${boxClass}" style="cursor:${match ? 'pointer' : 'default'}" ${onclick}>
-      <div class="match-box-label">${label}</div>
-      ${renderTeamRow(h, hScore, hScore !== null && hScore > aScore, hLabel)}
-      ${renderTeamRow(a, aScore, aScore !== null && aScore > hScore, aLabel)}
-    </div>
-  `;
-}
-
-/* ── Winner/Loser helpers ── */
-function getWinner(sf) {
-  if (!sf?.match || sf.match.status !== 'finished') return null;
-  const hs = Number(sf.match.home_score);
-  const as = Number(sf.match.away_score);
-  if (hs > as) return sf.home;
-  if (as > hs) return sf.away;
   return null;
 }
 
-function getLoser(sf) {
-  if (!sf?.match || sf.match.status !== 'finished') return null;
-  const hs = Number(sf.match.home_score);
-  const as = Number(sf.match.away_score);
-  if (hs > as) return sf.away;
-  if (as > hs) return sf.home;
-  return null;
-}
-
-function getQFWinner(sfs) {
-  for (const sf of sfs) {
-    const w = getWinner(sf);
-    if (w) return w;
-  }
-  return null;
-}
-
-function getQFLoser(sfs) {
-  for (const sf of sfs) {
-    const l = getLoser(sf);
-    if (l) return l;
-  }
-  return null;
-}
-
-/* ── SVG connectors ── */
+/* ── Connettori SVG ── */
 function renderConnectorRight() {
   return `
     <svg class="connector" height="40" viewBox="0 0 60 40" fill="none">
       <path d="M0 20 H60" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4 3"/>
-    </svg>
-  `;
+    </svg>`;
 }
 
 function renderConnectorLeft() {
   return `
     <svg class="connector" height="40" viewBox="0 0 60 40" fill="none">
       <path d="M60 20 H0" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4 3"/>
-    </svg>
-  `;
+    </svg>`;
 }
 
 /* ── Utils ── */

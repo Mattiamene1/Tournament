@@ -58,6 +58,38 @@
     .shootout-sep { font-size: 28px; font-weight: 900; opacity: .4; }
     .shootout-finish { margin-top: 16px; text-align: center; }
 
+    /* Shootout tiro-per-tiro */
+    .so-attempts { font-size: 12px; opacity: .6; margin-top: 2px; }
+    .so-add-row { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .so-player-select {
+      padding: 7px 8px; border-radius: 8px; border: 1px solid #cbd5e1;
+      font-family: inherit; font-size: 13px; width: 100%;
+    }
+    .so-add-btns { display: flex; gap: 6px; }
+    .so-add {
+      flex: 1; border: none; border-radius: 8px; padding: 8px 6px;
+      font-weight: 700; cursor: pointer; font-family: inherit; font-size: 13px;
+    }
+    .so-add.made { background: #16a34a; color: #fff; }
+    .so-add.miss { background: #e5e7eb; color: #0f172a; }
+    .so-add:hover { filter: brightness(.95); }
+    .so-kicks { margin-top: 12px; display: flex; flex-direction: column; gap: 5px; text-align: left; }
+    .so-kick {
+      display: flex; align-items: center; gap: 8px;
+      background: #fff; border: 1px solid #ede9fe; border-radius: 8px;
+      padding: 5px 8px; font-size: 13px;
+    }
+    .so-kick.miss { opacity: .6; }
+    .so-kick-icon { flex: 0 0 auto; }
+    .so-kick-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .so-kick-del {
+      border: none; background: #fee2e2; color: #dc2626; border-radius: 6px;
+      width: 22px; height: 22px; cursor: pointer; font-size: 11px; flex: 0 0 auto;
+    }
+    .so-empty { font-size: 12px; opacity: .5; font-style: italic; }
+    .shootout-finish-hint { margin-top: 10px; font-size: 12px; color: #7c3aed; opacity: .85; }
+    .shootout-finish button:disabled { opacity: .5; cursor: not-allowed; }
+
     /* Pulsanti modifica/elimina su ogni evento (solo admin) */
     .tl-card { position: relative; }
     .tl-actions {
@@ -82,6 +114,24 @@
     .tl-action.edit   { background: #e0e7ff; color: #1d4ed8; }
     .tl-action.delete { background: #fee2e2; color: #dc2626; }
 
+    /* Squadra di casa: pulsanti evento in alto a SINISTRA */
+    .tl-card--home .tl-actions { left: 6px; right: auto; }
+
+    /* Rettangolo del risultato: si adatta quando compare il punteggio shootout */
+    .match-detail-card .vs {
+      flex: 0 0 auto;
+      min-width: 64px;
+      max-width: none;
+      white-space: normal;
+      line-height: 1.2;
+      padding: 8px 12px;
+    }
+    .match-detail-card .vs .shootout-score-inline {
+      display: block;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
     .edit-cancel-row { text-align: center; margin-top: 8px; }
     .edit-cancel-btn {
       border: none;
@@ -93,6 +143,35 @@
       cursor: pointer;
     }
     .edit-cancel-btn:hover { background: #d1d5db; }
+
+    /* Campo da gioco nell'header */
+    .match-pitch { color: #475569; white-space: nowrap; }
+
+    /* Divisore timeline (Fine 1° tempo) */
+    .tl-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .tl-divider-line {
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+    .tl-divider-chip {
+      flex: 0 0 auto;
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: 5px 14px;
+      border-radius: 999px;
+      border: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
   </style>
 </head>
 
@@ -137,6 +216,7 @@ let matchData = null;
 let homePlayers = [];
 let awayPlayers = [];
 let bonuses = [];
+let pitches = [];
 let timerInterval = null;
 
 let scheduleEditMode = false;
@@ -173,6 +253,13 @@ async function loadMatchPage() {
 
     const bonusesRes = await fetch('/bonuses');
     bonuses = await bonusesRes.json();
+
+    try {
+      const pitchesRes = await fetch('/matches/meta/pitches');
+      pitches = await pitchesRes.json();
+    } catch {
+      pitches = [];
+    }
 
     renderMatch(events);
 
@@ -217,20 +304,32 @@ function renderMatchHeader() {
     // durante 'shootout' i comandi sono nel pannello rigori dedicato
   }
 
+  const pitchName = getPitchName(matchData.pitch_id);
+  const pitchHtml = pitchName
+    ? `<span class="match-pitch">📍 ${pitchName}</span>` : '';
+
   const scheduleBox = logged && scheduleEditMode ? `
     <div class="schedule-edit-box">
       <input class="match-datetime-input" id="match-date" type="datetime-local" value="${toDateTimeLocal(matchData.match_date)}">
-      <button class="match-datetime-button" onclick="updateMatchDate()">Salva programmazione</button>
+      <select class="match-datetime-input" id="match-pitch">
+        ${pitches.map(p => `<option value="${p.id}" ${String(p.id) === String(matchData.pitch_id) ? 'selected' : ''}>${p.name}</option>`).join('')}
+      </select>
+      <button class="match-datetime-button" onclick="updateSchedule()">Salva programmazione</button>
     </div>` : '';
+
+  const groupHtml = matchData.group_name
+    ? `<span class="match-group clickable" onclick="goToStandings()" title="Vai alle classifiche">${matchData.group_name}</span>`
+    : '';
 
   return `
     <div class="match-header match-detail-header">
       <div class="match-header-left">
         <span class="match-date">${formatDate(matchData.match_date)}</span>
+        ${pitchHtml}
         ${editBtn}
       </div>
       <div class="match-header-center">${stateBtns}</div>
-      <span class="match-group">${matchData.group_name || ''}</span>
+      ${groupHtml}
     </div>
     ${scheduleBox}`;
 }
@@ -331,38 +430,98 @@ function renderMatch(events) {
   if (logged && editEventId) initEditEventBox();
 }
 
-function renderShootoutPanel() {
+// Tiri shootout di un lato (eventi con goal_type='shootout')
+function shootoutKicks(side) {
+  const teamId = side === 'home' ? matchData.home_team_id : matchData.away_team_id;
+  return allEvents.filter(e =>
+    e.goal_type === 'shootout' && String(e.team_id) === String(teamId)
+  );
+}
+
+function shootoutPlayerOptions(side) {
+  const players = side === 'home' ? homePlayers : awayPlayers;
+  return players.map(p =>
+    `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
+  ).join('');
+}
+
+function renderKickList(side) {
+  const kicks = shootoutKicks(side);
+  if (!kicks.length) return '<div class="so-empty">Nessun tiro</div>';
+
+  return kicks.map(e => {
+    const made = e.event_type === 'goal';
+    const name = e.player_name || formatEventPlayerName(e) || '—';
+    return `
+      <div class="so-kick ${made ? 'made' : 'miss'}">
+        <span class="so-kick-icon">${made ? '⚽' : '✗'}</span>
+        <span class="so-kick-name">${e.shirt_number ? `#${e.shirt_number} ` : ''}${name}</span>
+        <button class="so-kick-del" title="Rimuovi tiro" onclick="removeShootoutKick(${e.id})">✕</button>
+      </div>`;
+  }).join('');
+}
+
+function renderShootoutTeam(side) {
+  const name  = side === 'home' ? matchData.home_team_name : matchData.away_team_name;
+  const selId = side === 'home' ? 'so-player-home' : 'so-player-away';
+  const kicks = shootoutKicks(side);
+  const made  = kicks.filter(e => e.event_type === 'goal').length;
+  const att   = kicks.length;
+
   return `
-    <div class="shootout-panel">
-      <h3><i class="fa-solid fa-futbol"></i> Calci di rigore</h3>
-      <div class="shootout-hint">Pareggio: si va ai rigori (al meglio di ${SHOOTOUT_BEST_OF})</div>
+    <div class="shootout-team">
+      <div class="shootout-team-name">${formatTeamName(name)}</div>
+      <div class="shootout-count">${made}</div>
+      <div class="so-attempts">su ${att} tir${att === 1 ? 'o' : 'i'}</div>
 
-      <div class="shootout-grid">
-        <div class="shootout-team">
-          <div class="shootout-team-name">${formatTeamName(matchData.home_team_name)}</div>
-          <div class="shootout-count">${matchData.home_shootout_score || 0}</div>
-          <div class="shootout-controls">
-            <button class="so-minus" onclick="addShootout('home', -1)">−</button>
-            <button class="so-plus"  onclick="addShootout('home', 1)">+</button>
-          </div>
-        </div>
-
-        <div class="shootout-sep">-</div>
-
-        <div class="shootout-team">
-          <div class="shootout-team-name">${formatTeamName(matchData.away_team_name)}</div>
-          <div class="shootout-count">${matchData.away_shootout_score || 0}</div>
-          <div class="shootout-controls">
-            <button class="so-minus" onclick="addShootout('away', -1)">−</button>
-            <button class="so-plus"  onclick="addShootout('away', 1)">+</button>
-          </div>
+      <div class="so-add-row">
+        <select class="so-player-select" id="${selId}">
+          ${shootoutPlayerOptions(side)}
+        </select>
+        <div class="so-add-btns">
+          <button class="so-add made" onclick="addShootoutKick('${side}', true)">⚽ Segnato</button>
+          <button class="so-add miss" onclick="addShootoutKick('${side}', false)">✗ Sbagliato</button>
         </div>
       </div>
 
+      <div class="so-kicks">${renderKickList(side)}</div>
+    </div>`;
+}
+
+function renderShootoutPanel() {
+  const h = shootoutKicks('home');
+  const a = shootoutKicks('away');
+  const hMade = h.filter(e => e.event_type === 'goal').length;
+  const aMade = a.filter(e => e.event_type === 'goal').length;
+  const hAtt = h.length, aAtt = a.length;
+
+  // Non può finire in pareggio: stessi tentativi e gol diversi
+  const canFinish = hAtt === aAtt && hMade !== aMade;
+  let hint = '';
+  if (!canFinish) {
+    if (hAtt !== aAtt) {
+      hint = 'Le due squadre devono aver tirato lo stesso numero di volte.';
+    } else {
+      hint = 'Parità: si continua a oltranza finché una squadra non è avanti a parità di tiri.';
+    }
+  }
+
+  return `
+    <div class="shootout-panel">
+      <h3><i class="fa-solid fa-futbol"></i> Shotout</h3>
+      <div class="shootout-hint">Al meglio di ${SHOOTOUT_BEST_OF}, poi a oltranza · i gol contano nei marcatori</div>
+
+      <div class="shootout-grid">
+        ${renderShootoutTeam('home')}
+        <div class="shootout-sep">-</div>
+        ${renderShootoutTeam('away')}
+      </div>
+
       <div class="shootout-finish">
-        <button class="match-state-btn danger" onclick="finishShootout()">
+        <button class="match-state-btn danger" onclick="finishShootout()" ${canFinish ? '' : 'disabled'}>
           <i class="fa-solid fa-flag-checkered"></i> Termina partita
         </button>
+        ${hint ? `<div class="shootout-finish-hint">${hint}</div>` : ''}
       </div>
     </div>`;
 }
@@ -399,7 +558,7 @@ function renderAddEventBox() {
 
         <div class="admin-field" id="goal-type-box">
           <label>Tipo gol</label>
-          <select id="goal-type">
+          <select id="goal-type" onchange="updateAssistVisibility()">
             <option value="azione">Azione</option>
             <option value="rigore">Rigore</option>
             <option value="punizione">Punizione</option>
@@ -420,6 +579,15 @@ function renderAddEventBox() {
           </select>
         </div>
 
+        <div class="admin-field hidden" id="bonus-outcome-box">
+          <label>Esito bonus</label>
+          <select id="bonus-outcome">
+            <option value="scored">Segnato</option>
+            <option value="missed">Sbagliato</option>
+            <option value="happened">Accaduto</option>
+          </select>
+        </div>
+
         <div class="admin-field minute-field">
           <label><i class="fa-solid fa-clock"></i> Minuto</label>
           <div class="minute-row">
@@ -433,54 +601,93 @@ function renderAddEventBox() {
   `;
 }
 
-function renderEvents(events) {
-  if (!events || !events.length) return '<p>Nessun evento.</p>';
+// Minuto di gioco in cui si è chiuso il 1° tempo (null se non ancora finito)
+function halfTimeEndMinute() {
+  const start    = parseStartedAt();
+  const firstEnd = parseDate(matchData.first_half_ended_at);
+  if (!start || !firstEnd) return null;
+  return Math.max(1, Math.floor((firstEnd - start) / 60000));
+}
 
+function halfTimeDividerHtml() {
+  const m = halfTimeEndMinute();
+  if (m === null) return '';
   return `
-    <div class="timeline">
-      ${events.map(e => {
-        const isHome = String(e.team_id) === String(matchData.home_team_id);
-        const playerName = e.player_name || formatEventPlayerName(e);
-        const playerId   = e.player_id;
+    <div class="tl-divider">
+      <span class="tl-divider-line"></span>
+      <span class="tl-divider-chip">⏸ Fine 1° tempo</span>
+      <span class="tl-divider-line"></span>
+    </div>`;
+}
 
-        const card = `
-          <div class="tl-card">
-            ${logged ? `
-              <div class="tl-actions">
-                <button class="tl-action edit" title="Modifica evento" onclick="openEditEvent(${e.id})">
-                  <i class="fa-solid fa-pen"></i>
-                </button>
-                <button class="tl-action delete" title="Elimina evento" onclick="deleteEvent(${e.id})">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>` : ''}
-            <div class="tl-label">${eventLabel(e)}</div>
-            <div class="tl-player ${playerId ? 'event-player-link' : ''}"
-              ${playerId ? `onclick="goToPlayer(${playerId})"` : ''}>
-              ${e.shirt_number ? `#${e.shirt_number} ` : ''}${playerName}
-            </div>
-            ${e.assist_player_id ? `
-              <div class="tl-assist">
-                🅰️ <span class="event-player-link" onclick="goToPlayer(${e.assist_player_id})">
-                  ${e.assist_first_name ? `${e.assist_first_name} ${e.assist_last_name}` : ''}
-                </span>
-              </div>` : ''}
-          </div>
-        `;
+function renderEventRow(e) {
+  const isHome = String(e.team_id) === String(matchData.home_team_id);
+  const playerName = e.player_name || formatEventPlayerName(e);
+  const playerId   = e.player_id;
 
-        return `
-          <div class="tl-row">
-            <div class="tl-home">${isHome ? card : ''}</div>
-            <div class="tl-center">
-              <div class="tl-icon">${eventIcon(e.event_type)}</div>
-              <div class="tl-minute">${e.minute}'</div>
-            </div>
-            <div class="tl-away">${!isHome ? card : ''}</div>
-          </div>
-        `;
-      }).join('')}
+  const card = `
+    <div class="tl-card ${isHome ? 'tl-card--home' : ''}">
+      ${logged ? `
+        <div class="tl-actions">
+          <button class="tl-action edit" title="Modifica evento" onclick="openEditEvent(${e.id})">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="tl-action delete" title="Elimina evento" onclick="deleteEvent(${e.id})">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>` : ''}
+      <div class="tl-label">${eventLabel(e)}</div>
+      <div class="tl-player ${playerId ? 'event-player-link' : ''}"
+        ${playerId ? `onclick="goToPlayer(${playerId})"` : ''}>
+        ${e.shirt_number ? `#${e.shirt_number} ` : ''}${playerName}
+      </div>
+      ${e.assist_player_id ? `
+        <div class="tl-assist">
+          🅰️ <span class="event-player-link" onclick="goToPlayer(${e.assist_player_id})">
+            ${e.assist_first_name ? `${e.assist_first_name} ${e.assist_last_name}` : ''}
+          </span>
+        </div>` : ''}
     </div>
   `;
+
+  return `
+    <div class="tl-row">
+      <div class="tl-home">${isHome ? card : ''}</div>
+      <div class="tl-center">
+        <div class="tl-icon">${eventIcon(e.event_type)}</div>
+        <div class="tl-minute">${e.minute}'</div>
+      </div>
+      <div class="tl-away">${!isHome ? card : ''}</div>
+    </div>
+  `;
+}
+
+function renderEvents(events) {
+  // I tiri dello shootout non vanno nella timeline: stanno solo nel pannello
+  events = (events || []).filter(e => e.goal_type !== 'shootout');
+
+  const divider  = halfTimeDividerHtml();   // '' se 1° tempo non ancora finito
+  const halfEnd  = halfTimeEndMinute();
+
+  if (!events || !events.length) {
+    // Senza eventi mostro comunque il marcatore se il 1° tempo è finito
+    return divider ? `<div class="timeline">${divider}</div>` : '<p>Nessun evento.</p>';
+  }
+
+  let dividerDone = false;
+  const rows = [];
+
+  events.forEach(e => {
+    if (divider && !dividerDone && halfEnd !== null && Number(e.minute) > halfEnd) {
+      rows.push(divider);
+      dividerDone = true;
+    }
+    rows.push(renderEventRow(e));
+  });
+
+  if (divider && !dividerDone) rows.push(divider);
+
+  return `<div class="timeline">${rows.join('')}</div>`;
 }
 
 function formatEventPlayerName(e) {
@@ -503,7 +710,10 @@ function eventLabel(e) {
   if (e.event_type === 'goal')        return `Gol - ${e.goal_type || ''}`;
   if (e.event_type === 'yellow_card') return 'Cartellino Giallo';
   if (e.event_type === 'red_card')    return 'Cartellino Rosso';
-  if (e.event_type === 'bonus')       return `Bonus - ${e.bonus_name || ''}`;
+  if (e.event_type === 'bonus') {
+    const suffix = e.bonus_outcome === 'missed' ? ' · sbagliato' : '';
+    return `Bonus - ${e.bonus_name || ''}${suffix}`;
+  }
   return e.event_type;
 }
 
@@ -545,19 +755,34 @@ function handleEventTypeChange() {
   const type = document.getElementById('event-type')?.value;
   if (!type) return;
 
-  document.getElementById('goal-type-box').style.display = 'none';
-  document.getElementById('assist-box').style.display    = 'none';
-  document.getElementById('bonus-box').style.display     = 'none';
+  document.getElementById('goal-type-box').style.display     = 'none';
+  document.getElementById('assist-box').style.display        = 'none';
+  document.getElementById('bonus-box').style.display         = 'none';
+  document.getElementById('bonus-outcome-box').style.display = 'none';
 
   if (type === 'goal') {
     document.getElementById('goal-type-box').style.display = 'flex';
-    document.getElementById('assist-box').style.display    = 'flex';
+    updateAssistVisibility();
   }
-  if (type === 'bonus') document.getElementById('bonus-box').style.display = 'flex';
+  if (type === 'bonus') {
+    document.getElementById('bonus-box').style.display         = 'flex';
+    document.getElementById('bonus-outcome-box').style.display = 'flex';
+  }
 }
 
-async function updateMatchDate() {
+// L'assist esiste solo per i gol di azione: rigore e punizione non hanno assist
+function updateAssistVisibility() {
+  const type     = document.getElementById('event-type')?.value;
+  const goalType = document.getElementById('goal-type')?.value;
+  const assistBox = document.getElementById('assist-box');
+  if (!assistBox) return;
+  assistBox.style.display = (type === 'goal' && goalType === 'azione') ? 'flex' : 'none';
+}
+
+async function updateSchedule() {
   const match_date = document.getElementById('match-date').value;
+  const pitchSel   = document.getElementById('match-pitch');
+  const pitch_id   = pitchSel ? (pitchSel.value || null) : matchData.pitch_id;
 
   const res = await fetch(`/matches/${matchId}`, {
     method: 'PUT',
@@ -567,7 +792,7 @@ async function updateMatchDate() {
       home_team_id: matchData.home_team_id,
       away_team_id: matchData.away_team_id,
       match_date,
-      pitch_id:     matchData.pitch_id,
+      pitch_id,
       referee_id:   matchData.referee_id,
       status:       matchData.status
     })
@@ -575,7 +800,7 @@ async function updateMatchDate() {
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    alert(error.error || 'Errore aggiornamento data');
+    alert(error.error || 'Errore aggiornamento programmazione');
     return;
   }
 
@@ -623,35 +848,46 @@ async function finishMatch() {
   if (!res.ok) { alert(data.error || 'Errore chiusura partita'); return; }
 
   if (data.shootout) {
-    alert(`Pareggio! Si va ai calci di rigore (al meglio di ${SHOOTOUT_BEST_OF}).`);
+    alert(`Pareggio! Si va agli shotout (al meglio di ${SHOOTOUT_BEST_OF}).`);
   }
 
   eventCreateMode = false;
   await loadMatchPage();
 }
 
-async function addShootout(side, delta) {
-  const res  = await fetch(`/matches/${matchId}/shootout`, {
+async function addShootoutKick(side, scored) {
+  const teamId = side === 'home' ? matchData.home_team_id : matchData.away_team_id;
+  const sel    = document.getElementById(side === 'home' ? 'so-player-home' : 'so-player-away');
+  const playerId = sel ? sel.value : '';
+
+  if (!playerId) { alert('Seleziona il giocatore che ha tirato.'); return; }
+
+  const res  = await fetch(`/matches/${matchId}/shootout-kick`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ side, delta })
+    body: JSON.stringify({ team_id: Number(teamId), player_id: Number(playerId), scored })
   });
   const data = await res.json().catch(() => ({}));
 
-  if (!res.ok) { alert(data.error || 'Errore aggiornamento rigori'); return; }
+  if (!res.ok) { alert(data.error || 'Errore tiro shootout'); return; }
+  await loadMatchPage();
+}
 
-  // aggiorno solo i dati locali ed eseguo un re-render leggero
-  if (data.match) matchData = data.match;
+async function removeShootoutKick(eventId) {
+  const res  = await fetch(`/matches/${matchId}/shootout-kick/${eventId}`, { method: 'DELETE' });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) { alert(data.error || 'Errore rimozione tiro'); return; }
   await loadMatchPage();
 }
 
 async function finishShootout() {
-  if (!confirm("Confermare il risultato dei rigori e terminare la partita?")) return;
+  if (!confirm("Confermare il risultato degli shotout e terminare la partita?")) return;
 
   const res  = await fetch(`/matches/${matchId}/finish-shootout`, { method: 'POST' });
   const data = await res.json().catch(() => ({}));
 
-  if (!res.ok) { alert(data.error || 'Errore chiusura rigori'); return; }
+  if (!res.ok) { alert(data.error || 'Errore chiusura shotout'); return; }
   await loadMatchPage();
 }
 
@@ -671,8 +907,12 @@ async function createMatchEvent() {
 
   if (event_type === 'goal') {
     body.goal_type = document.getElementById('goal-type').value;
-    const assist = document.getElementById('assist-player').value;
-    body.assist_player_id = assist ? Number(assist) : null;
+    if (body.goal_type === 'azione') {
+      const assist = document.getElementById('assist-player').value;
+      body.assist_player_id = assist ? Number(assist) : null;
+    } else {
+      body.assist_player_id = null;   // rigore/punizione: nessun assist
+    }
   }
 
   if (event_type === 'yellow_card' || event_type === 'red_card') {
@@ -680,8 +920,8 @@ async function createMatchEvent() {
   }
 
   if (event_type === 'bonus') {
-    body.bonus_id    = Number(document.getElementById('bonus-id').value);
-    body.event_value = 1;
+    body.bonus_id      = Number(document.getElementById('bonus-id').value);
+    body.bonus_outcome = document.getElementById('bonus-outcome').value;
   }
 
   const res = await fetch('/match-events', {
@@ -764,7 +1004,7 @@ function renderEditEventBox() {
 
         <div class="admin-field" id="edit-goal-type-box">
           <label>Tipo gol</label>
-          <select id="edit-goal-type">
+          <select id="edit-goal-type" onchange="updateEditAssistVisibility()">
             <option value="azione"    ${sel(e.goal_type,'azione')}>Azione</option>
             <option value="rigore"    ${sel(e.goal_type,'rigore')}>Rigore</option>
             <option value="punizione" ${sel(e.goal_type,'punizione')}>Punizione</option>
@@ -782,6 +1022,15 @@ function renderEditEventBox() {
           <label>Bonus</label>
           <select id="edit-bonus-id">
             ${bonuses.map(b => `<option value="${b.id}" ${sel(b.id, e.bonus_id)}>${b.name}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="admin-field" id="edit-bonus-outcome-box">
+          <label>Esito bonus</label>
+          <select id="edit-bonus-outcome">
+            <option value="scored"   ${sel(e.bonus_outcome || 'scored','scored')}>Segnato</option>
+            <option value="missed"   ${sel(e.bonus_outcome,'missed')}>Sbagliato</option>
+            <option value="happened" ${sel(e.bonus_outcome,'happened')}>Accaduto</option>
           </select>
         </div>
 
@@ -829,15 +1078,27 @@ function handleEditTypeChange() {
   const type = document.getElementById('edit-event-type')?.value;
   if (!type) return;
 
-  document.getElementById('edit-goal-type-box').style.display = 'none';
-  document.getElementById('edit-assist-box').style.display    = 'none';
-  document.getElementById('edit-bonus-box').style.display     = 'none';
+  document.getElementById('edit-goal-type-box').style.display     = 'none';
+  document.getElementById('edit-assist-box').style.display        = 'none';
+  document.getElementById('edit-bonus-box').style.display         = 'none';
+  document.getElementById('edit-bonus-outcome-box').style.display = 'none';
 
   if (type === 'goal') {
     document.getElementById('edit-goal-type-box').style.display = 'flex';
-    document.getElementById('edit-assist-box').style.display    = 'flex';
+    updateEditAssistVisibility();
   }
-  if (type === 'bonus') document.getElementById('edit-bonus-box').style.display = 'flex';
+  if (type === 'bonus') {
+    document.getElementById('edit-bonus-box').style.display         = 'flex';
+    document.getElementById('edit-bonus-outcome-box').style.display = 'flex';
+  }
+}
+
+function updateEditAssistVisibility() {
+  const type     = document.getElementById('edit-event-type')?.value;
+  const goalType = document.getElementById('edit-goal-type')?.value;
+  const assistBox = document.getElementById('edit-assist-box');
+  if (!assistBox) return;
+  assistBox.style.display = (type === 'goal' && goalType === 'azione') ? 'flex' : 'none';
 }
 
 // Da chiamare dopo aver iniettato l'HTML del box di modifica
@@ -873,8 +1134,12 @@ async function submitEditEvent() {
 
   if (event_type === 'goal') {
     body.goal_type = document.getElementById('edit-goal-type').value;
-    const assist = document.getElementById('edit-assist-player').value;
-    body.assist_player_id = assist ? Number(assist) : null;
+    if (body.goal_type === 'azione') {
+      const assist = document.getElementById('edit-assist-player').value;
+      body.assist_player_id = assist ? Number(assist) : null;
+    } else {
+      body.assist_player_id = null;   // rigore/punizione: nessun assist
+    }
   }
 
   if (event_type === 'yellow_card' || event_type === 'red_card') {
@@ -882,8 +1147,8 @@ async function submitEditEvent() {
   }
 
   if (event_type === 'bonus') {
-    body.bonus_id    = Number(document.getElementById('edit-bonus-id').value);
-    body.event_value = 1;
+    body.bonus_id      = Number(document.getElementById('edit-bonus-id').value);
+    body.bonus_outcome = document.getElementById('edit-bonus-outcome').value;
   }
 
   const res = await fetch(`/match-events/${id}`, {
@@ -994,6 +1259,13 @@ function getTeamLogo(name) {
 function goToPlayer(id)  { window.location.href = `player.html?id=${id}`; }
 function goToTeam(id)    { window.location.href = `team.html?id=${id}`; }
 function goToReferee(id) { window.location.href = `referee.html?id=${id}`; }
+function goToStandings() { window.location.href = 'standing.html'; }
+
+function getPitchName(id) {
+  if (!id) return '';
+  const p = pitches.find(x => String(x.id) === String(id));
+  return p ? p.name : '';
+}
 
 function hadShootout(m) {
   m = m || matchData;
@@ -1018,13 +1290,13 @@ function renderStatus(status, phase) {
       case 'first_half':  return '🔴 LIVE · 1° Tempo';
       case 'halftime':    return '⏸ Intervallo';
       case 'second_half': return '🔴 LIVE · 2° Tempo';
-      case 'shootout':    return '🥅 Calci di rigore';
+      case 'shootout':    return '🥅 Shotout';
       default:            return '🔴 LIVE';
     }
   }
   switch (status) {
     case 'scheduled': return '🕒 In programma';
-    case 'finished':  return hadShootout() ? '✅ Terminata (d.c.r.)' : '✅ Terminata';
+    case 'finished':  return hadShootout() ? '✅ Terminata (dopo shotout)' : '✅ Terminata';
     default:          return status;
   }
 }

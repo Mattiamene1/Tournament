@@ -1,6 +1,27 @@
 const MatchEvent = require('../models/match_events.model');
 const Bonus = require('../models/bonuses.model');
 
+/*
+  Normalizza un evento bonus in base all'esito scelto:
+    bonus_outcome = 'scored' | 'missed' | 'happened'
+    event_value   = gol del bonus se 'scored', altrimenti 0
+  Per gli eventi non-bonus azzera bonus_outcome.
+  (Muta l'oggetto data passato.)
+*/
+async function applyBonusOutcome(data) {
+  if (data.event_type !== 'bonus') {
+    data.bonus_outcome = null;
+    return;
+  }
+
+  const bonus = await Bonus.getBonusById(data.bonus_id);
+  if (!bonus) throw new Error('Bonus non trovato');
+
+  const outcome = data.bonus_outcome || data.outcome || 'scored';
+  data.bonus_outcome = outcome;
+  data.event_value = (outcome === 'scored') ? Number(bonus.goal_value || 0) : 0;
+}
+
 /* CREATE */
 async function createMatchEvent(req, res) {
   try {
@@ -10,35 +31,16 @@ async function createMatchEvent(req, res) {
       return res.status(400).json({ error: 'Campi obbligatori mancanti' });
     }
 
+    // Imposta bonus_outcome / event_value per i bonus
+    await applyBonusOutcome(data);
+
     await MatchEvent.createMatchEvent(data);
 
-    // ⚽ GOAL STANDARD
+    // Punteggio: gol = +1; bonus = +event_value (0 se sbagliato/accaduto)
     if (data.event_type === 'goal') {
       await MatchEvent.updateMatchScore(data.match_id, data.team_id, 1);
-    }
-
-    // ⭐ BONUS
-    if (data.event_type === 'bonus') {
-      const bonus = await Bonus.getBonusById(data.bonus_id);
-
-      if (!bonus) {
-        return res.status(404).json({ error: 'Bonus non trovato' });
-      }
-
-      // 👉 opzionale: gestisci esito
-      if (data.outcome === 'missed') {
-        return res.json({ success: true }); // nessun gol
-      }
-
-      const goalsToAdd = Number(bonus.goal_value || 0);
-
-      if (goalsToAdd > 0) {
-        await MatchEvent.updateMatchScore(
-          data.match_id,
-          data.team_id,
-          goalsToAdd
-        );
-      }
+    } else if (data.event_type === 'bonus' && Number(data.event_value) > 0) {
+      await MatchEvent.updateMatchScore(data.match_id, data.team_id, Number(data.event_value));
     }
 
     res.json({ success: true });
@@ -85,16 +87,14 @@ async function getMatchEventById(req, res) {
 /*
   Calcola quanti gol vale un evento ai fini del punteggio del tabellone.
   - goal  → 1
-  - bonus → goal_value del bonus (getMatchEventById restituisce già bonus_value
-            tramite il JOIN sulla tabella bonuses)
+  - bonus → event_value memorizzato (gol del bonus se "segnato", 0 se
+            "sbagliato"/"accaduto"), così update/delete restano coerenti
   - altro → 0
-  Rispecchia la logica di createMatchEvent, così update/delete possono
-  "annullare" o "riapplicare" l'effetto sullo score in modo coerente.
 */
 function scoreDeltaForEvent(event) {
   if (!event) return 0;
   if (event.event_type === 'goal') return 1;
-  if (event.event_type === 'bonus') return Number(event.bonus_value || 0);
+  if (event.event_type === 'bonus') return Number(event.event_value || 0);
   return 0;
 }
 
@@ -110,7 +110,8 @@ async function updateMatchEvent(req, res) {
       }
     }
 
-    // 2) applico la modifica
+    // 2) applico la modifica (normalizzando prima l'esito bonus)
+    await applyBonusOutcome(req.body);
     await MatchEvent.updateMatchEvent(req.params.id, req.body);
 
     // 3) applico l'effetto del nuovo evento (gestisce cambio squadra/tipo/bonus)
