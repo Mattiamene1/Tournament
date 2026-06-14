@@ -21,6 +21,7 @@
     /* Fasi senza lampeggio del LIVE */
     .match-status.halftime { color: #d97706; animation: none; }
     .match-status.shootout { color: #7c3aed; animation: none; }
+    .match-status.extratime { color: #16a34a; animation: none; }
     .shootout-score-inline { color: #7c3aed; font-weight: 800; font-size: .85em; }
   </style>
 </head>
@@ -45,7 +46,7 @@
 </header>
 
 <div class="container">
-  <h1>📅 Calendario Partite</h1>
+  <h1>⚽ Calendario Partite</h1>
 
   <div id="matches-container">
     <p>Caricamento...</p>
@@ -151,6 +152,7 @@ function hadShootout(match) {
 function statusClass(match) {
   if (match.status === 'live' && match.phase === 'halftime') return 'halftime';
   if (match.status === 'live' && match.phase === 'shootout') return 'shootout';
+  if (match.status === 'live' && match.phase === 'extra_time') return 'extratime';
   return match.status;
 }
 
@@ -168,6 +170,7 @@ function renderStatus(match) {
       case 'first_half':  return '🔴 LIVE · 1° Tempo';
       case 'halftime':    return '⏸ Intervallo';
       case 'second_half': return '🔴 LIVE · 2° Tempo';
+      case 'extra_time':  return '⚽ Supplementari';
       case 'shootout':    return '🥅 Shotout';
       default:            return '🔴 LIVE';
     }

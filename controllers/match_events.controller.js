@@ -34,11 +34,28 @@ async function createMatchEvent(req, res) {
     // Imposta bonus_outcome / event_value per i bonus
     await applyBonusOutcome(data);
 
+    // Regola: ogni squadra ha UN solo Rigore Presidenziale
+    if (data.event_type === 'goal' && data.goal_type === 'rigore_presidenziale') {
+      const used = await MatchEvent.countGoalType(data.match_id, data.team_id, 'rigore_presidenziale');
+      if (used >= 1) {
+        return res.status(400).json({ error: 'Rigore presidenziale già utilizzato da questa squadra.' });
+      }
+    }
+
+    // Regola: ogni squadra può usare UNA SOLA carta speciale
+    if (data.event_type === 'special_card') {
+      const used = await MatchEvent.countEventType(data.match_id, data.team_id, 'special_card');
+      if (used >= 1) {
+        return res.status(400).json({ error: 'Questa squadra ha già usato la sua carta speciale.' });
+      }
+    }
+
     await MatchEvent.createMatchEvent(data);
 
-    // Punteggio: gol = +1; bonus = +event_value (0 se sbagliato/accaduto)
+    // Punteggio: gol = +event_value (1, oppure 2 se "vale doppio");
+    //            bonus = +event_value (0 se sbagliato/accaduto)
     if (data.event_type === 'goal') {
-      await MatchEvent.updateMatchScore(data.match_id, data.team_id, 1);
+      await MatchEvent.updateMatchScore(data.match_id, data.team_id, Number(data.event_value) || 1);
     } else if (data.event_type === 'bonus' && Number(data.event_value) > 0) {
       await MatchEvent.updateMatchScore(data.match_id, data.team_id, Number(data.event_value));
     }
@@ -93,7 +110,7 @@ async function getMatchEventById(req, res) {
 */
 function scoreDeltaForEvent(event) {
   if (!event) return 0;
-  if (event.event_type === 'goal') return 1;
+  if (event.event_type === 'goal')  return Number(event.event_value || 1);
   if (event.event_type === 'bonus') return Number(event.event_value || 0);
   return 0;
 }
@@ -112,6 +129,24 @@ async function updateMatchEvent(req, res) {
 
     // 2) applico la modifica (normalizzando prima l'esito bonus)
     await applyBonusOutcome(req.body);
+
+    // Regola: un solo Rigore Presidenziale per squadra (escludo l'evento corrente)
+    if (req.body.event_type === 'goal' && req.body.goal_type === 'rigore_presidenziale') {
+      const used = await MatchEvent.countGoalType(
+        req.body.match_id, req.body.team_id, 'rigore_presidenziale', req.params.id
+      );
+      if (used >= 1) {
+        // ripristino l'effetto del vecchio evento sul punteggio prima di uscire
+        if (oldEvent) {
+          const restoreDelta = scoreDeltaForEvent(oldEvent);
+          if (restoreDelta > 0) {
+            await MatchEvent.updateMatchScore(oldEvent.match_id, oldEvent.team_id, restoreDelta);
+          }
+        }
+        return res.status(400).json({ error: 'Rigore presidenziale già utilizzato da questa squadra.' });
+      }
+    }
+
     await MatchEvent.updateMatchEvent(req.params.id, req.body);
 
     // 3) applico l'effetto del nuovo evento (gestisce cambio squadra/tipo/bonus)

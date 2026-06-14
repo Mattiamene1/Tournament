@@ -20,8 +20,22 @@
     /* Stati aggiuntivi (intervallo / rigori) — animazione "blink" disattivata */
     .match-status.halftime { color: #d97706; animation: none; }
     .match-status.shootout { color: #7c3aed; animation: none; }
+    .match-status.extratime { color: #16a34a; animation: none; }
 
     .shootout-score-inline { color: #7c3aed; font-weight: 800; }
+
+    /* Badge recupero (oltre gli 8') */
+    .recupero-badge {
+      display: inline-block;
+      background: #d97706;
+      color: #fff;
+      font-size: .72em;
+      font-weight: 800;
+      padding: 1px 7px;
+      border-radius: 999px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
 
     .shootout-panel {
       margin: 16px 0;
@@ -195,7 +209,7 @@
 </header>
 
 <div class="container">
-  <h1>📅 Partita</h1>
+  <h1>⚽ Partita</h1>
 
   <div id="match-page">
     <p>Caricamento partita...</p>
@@ -207,6 +221,20 @@
 // Numero di rigori per squadra in caso di pareggio.
 // Cambia in 3 per "al meglio di 3", 5 per "al meglio di 5", ecc.
 const SHOOTOUT_BEST_OF = 5;
+
+// Durata regolamentare di un tempo (minuti). Oltre questa soglia parte il recupero.
+const HALF_MINUTES = 8;
+const HALF_MS = HALF_MINUTES * 60000;
+
+// Carte speciali del 2° tempo (id salvato in notes → etichetta)
+const SPECIAL_CARDS = {
+  rigore:      'Rigore',
+  shootout:    'Shootout',
+  sospensione: 'Sospensione',
+  star_player: 'Star Player',
+  gol_doppio:  'Gol Doppio',
+  jolly:       'Jolly'
+};
 
 const params = new URLSearchParams(window.location.search);
 const matchId = params.get('id');
@@ -300,6 +328,15 @@ function renderMatchHeader() {
         <button class="match-state-btn danger" onclick="finishMatch()">
           <i class="fa-solid fa-flag-checkered"></i> Termina partita
         </button>`;
+    } else if (matchData.status === 'live' && matchData.phase === 'extra_time') {
+      const diff = Number(matchData.home_score || 0) !== Number(matchData.away_score || 0);
+      stateBtns = diff
+        ? `<button class="match-state-btn danger" onclick="resolveExtraTime()">
+             <i class="fa-solid fa-flag-checkered"></i> Termina (Golden Goal)
+           </button>`
+        : `<button class="match-state-btn" onclick="resolveExtraTime()">
+             <i class="fa-solid fa-futbol"></i> Nessun gol · Vai agli shootout
+           </button>`;
     }
     // durante 'shootout' i comandi sono nel pannello rigori dedicato
   }
@@ -364,17 +401,18 @@ function renderMatchStatus() {
                   (phase === 'first_half' || phase === 'second_half');
 
   const timer = running
-    ? `<span class="live-timer-inline">⏱ <span id="match-timer">${getTimerText()}</span></span>` : '';
+    ? `<span class="live-timer-inline">⏱ <span id="match-timer">${renderClockHtml()}</span></span>` : '';
 
   // Punteggio rigori in corso / a fine partita ai rigori
   const shootout = (matchData.status === 'live' && phase === 'shootout')
     ? `<span class="shootout-score-inline">${matchData.home_shootout_score || 0} - ${matchData.away_shootout_score || 0}</span>`
     : '';
 
-  // Classe CSS: durante l'intervallo/rigori non vogliamo il "blink" del live
+  // Classe CSS: durante intervallo/supplementari/rigori niente "blink" del live
   let statusClass = matchData.status;
-  if (matchData.status === 'live' && phase === 'halftime') statusClass = 'halftime';
-  if (matchData.status === 'live' && phase === 'shootout') statusClass = 'shootout';
+  if (matchData.status === 'live' && phase === 'halftime')   statusClass = 'halftime';
+  if (matchData.status === 'live' && phase === 'shootout')   statusClass = 'shootout';
+  if (matchData.status === 'live' && phase === 'extra_time') statusClass = 'extratime';
 
   return `<div class="match-status ${statusClass}"><span>${renderStatus(matchData.status, phase)}</span>${timer}${shootout}</div>`;
 }
@@ -392,7 +430,9 @@ function renderReferee() {
 
 function renderAddEventButton() {
   const inPlay = matchData.status === 'live' &&
-                 (matchData.phase === 'first_half' || matchData.phase === 'second_half');
+                 (matchData.phase === 'first_half' ||
+                  matchData.phase === 'second_half' ||
+                  matchData.phase === 'extra_time');
   if (!logged || !inPlay) return '';
   return `
     <div class="match-event-action">
@@ -409,7 +449,9 @@ function renderMatch(events) {
   allEvents = events || [];
 
   const inPlay = matchData.status === 'live' &&
-                 (matchData.phase === 'first_half' || matchData.phase === 'second_half');
+                 (matchData.phase === 'first_half' ||
+                  matchData.phase === 'second_half' ||
+                  matchData.phase === 'extra_time');
   const inShootout = matchData.status === 'live' && matchData.phase === 'shootout';
 
   document.getElementById('match-page').innerHTML = `
@@ -540,6 +582,8 @@ function renderAddEventBox() {
             <option value="yellow_card">Cartellino Giallo</option>
             <option value="red_card">Cartellino Rosso</option>
             <option value="bonus">Bonus</option>
+            ${matchData.phase === 'second_half'
+              ? '<option value="special_card">Carta speciale</option>' : ''}
           </select>
         </div>
 
@@ -562,6 +606,15 @@ function renderAddEventBox() {
             <option value="azione">Azione</option>
             <option value="rigore">Rigore</option>
             <option value="punizione">Punizione</option>
+            <option value="rigore_presidenziale">Rigore Presidenziale</option>
+          </select>
+        </div>
+
+        <div class="admin-field" id="goal-value-box">
+          <label>Valore gol</label>
+          <select id="goal-value">
+            <option value="1">Normale</option>
+            <option value="2">Doppio (×2)</option>
           </select>
         </div>
 
@@ -569,6 +622,20 @@ function renderAddEventBox() {
           <label>Assist opzionale</label>
           <select id="assist-player">
             <option value="">Nessun assist</option>
+          </select>
+        </div>
+
+        <div class="admin-field hidden" id="card-box">
+          <label>Carta</label>
+          <select id="card-type-select">
+            ${Object.entries(SPECIAL_CARDS).map(([id, name]) => `<option value="${id}">${name}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="admin-field hidden" id="card-player-box">
+          <label>Giocatore (opzionale)</label>
+          <select id="card-player">
+            <option value="">Nessuno</option>
           </select>
         </div>
 
@@ -624,23 +691,26 @@ function renderEventRow(e) {
   const isHome = String(e.team_id) === String(matchData.home_team_id);
   const playerName = e.player_name || formatEventPlayerName(e);
   const playerId   = e.player_id;
+  const isCard     = e.event_type === 'special_card';
 
   const card = `
     <div class="tl-card ${isHome ? 'tl-card--home' : ''}">
       ${logged ? `
         <div class="tl-actions">
+          ${isCard ? '' : `
           <button class="tl-action edit" title="Modifica evento" onclick="openEditEvent(${e.id})">
             <i class="fa-solid fa-pen"></i>
-          </button>
+          </button>`}
           <button class="tl-action delete" title="Elimina evento" onclick="deleteEvent(${e.id})">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>` : ''}
       <div class="tl-label">${eventLabel(e)}</div>
+      ${playerName ? `
       <div class="tl-player ${playerId ? 'event-player-link' : ''}"
         ${playerId ? `onclick="goToPlayer(${playerId})"` : ''}>
         ${e.shirt_number ? `#${e.shirt_number} ` : ''}${playerName}
-      </div>
+      </div>` : ''}
       ${e.assist_player_id ? `
         <div class="tl-assist">
           🅰️ <span class="event-player-link" onclick="goToPlayer(${e.assist_player_id})">
@@ -698,18 +768,36 @@ function formatEventPlayerName(e) {
 
 function eventIcon(type) {
   switch (type) {
-    case 'goal':        return '⚽';
-    case 'yellow_card': return '🟨';
-    case 'red_card':    return '🟥';
-    case 'bonus':       return '⭐';
-    default:            return '•';
+    case 'goal':         return '⚽';
+    case 'yellow_card':  return '🟨';
+    case 'red_card':     return '🟥';
+    case 'bonus':        return '⭐';
+    case 'special_card': return '🃏';
+    default:             return '•';
+  }
+}
+
+function goalTypeLabel(gt) {
+  switch (gt) {
+    case 'azione':               return 'azione';
+    case 'rigore':               return 'rigore';
+    case 'punizione':            return 'punizione';
+    case 'rigore_presidenziale': return 'rigore presidenziale';
+    case 'shootout':             return 'shootout';
+    default:                     return gt || '';
   }
 }
 
 function eventLabel(e) {
-  if (e.event_type === 'goal')        return `Gol - ${e.goal_type || ''}`;
+  if (e.event_type === 'goal') {
+    const dbl = Number(e.event_value) === 2 ? ' ×2' : '';
+    return `Gol - ${goalTypeLabel(e.goal_type)}${dbl}`;
+  }
   if (e.event_type === 'yellow_card') return 'Cartellino Giallo';
   if (e.event_type === 'red_card')    return 'Cartellino Rosso';
+  if (e.event_type === 'special_card') {
+    return `Carta: ${SPECIAL_CARDS[e.notes] || e.notes || ''}`;
+  }
   if (e.event_type === 'bonus') {
     const suffix = e.bonus_outcome === 'missed' ? ' · sbagliato' : '';
     return `Bonus - ${e.bonus_name || ''}${suffix}`;
@@ -737,36 +825,64 @@ function renderPlayerSelects() {
 
   const playerSelect = document.getElementById('event-player');
   const assistSelect = document.getElementById('assist-player');
-  if (!playerSelect || !assistSelect) return;
-
-  playerSelect.innerHTML = players.map(p =>
-    `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
-  ).join('');
-
-  assistSelect.innerHTML = `
-    <option value="">Nessun assist</option>
-    ${players.map(p =>
+  if (playerSelect) {
+    playerSelect.innerHTML = players.map(p =>
       `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
-    ).join('')}
-  `;
+    ).join('');
+  }
+  if (assistSelect) {
+    assistSelect.innerHTML = `
+      <option value="">Nessun assist</option>
+      ${players.map(p =>
+        `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
+      ).join('')}
+    `;
+  }
+
+  const cardPlayer = document.getElementById('card-player');
+  if (cardPlayer) {
+    cardPlayer.innerHTML = `
+      <option value="">Nessuno</option>
+      ${players.map(p =>
+        `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
+      ).join('')}
+    `;
+  }
 }
 
 function handleEventTypeChange() {
   const type = document.getElementById('event-type')?.value;
   if (!type) return;
 
-  document.getElementById('goal-type-box').style.display     = 'none';
-  document.getElementById('assist-box').style.display        = 'none';
-  document.getElementById('bonus-box').style.display         = 'none';
-  document.getElementById('bonus-outcome-box').style.display = 'none';
+  const show = (id, on) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? 'flex' : 'none';
+  };
+
+  show('goal-type-box', false);
+  show('goal-value-box', false);
+  show('assist-box', false);
+  show('bonus-box', false);
+  show('bonus-outcome-box', false);
+  show('card-box', false);
+  show('card-player-box', false);
+
+  // Il giocatore non serve per le carte (è opzionale, ha il suo select)
+  const playerBox = document.getElementById('event-player')?.closest('.admin-field');
+  if (playerBox) playerBox.style.display = (type === 'special_card') ? 'none' : 'flex';
 
   if (type === 'goal') {
-    document.getElementById('goal-type-box').style.display = 'flex';
+    show('goal-type-box', true);
+    show('goal-value-box', true);
     updateAssistVisibility();
   }
   if (type === 'bonus') {
-    document.getElementById('bonus-box').style.display         = 'flex';
-    document.getElementById('bonus-outcome-box').style.display = 'flex';
+    show('bonus-box', true);
+    show('bonus-outcome-box', true);
+  }
+  if (type === 'special_card') {
+    show('card-box', true);
+    show('card-player-box', true);
   }
 }
 
@@ -847,8 +963,30 @@ async function finishMatch() {
 
   if (!res.ok) { alert(data.error || 'Errore chiusura partita'); return; }
 
-  if (data.shootout) {
+  if (data.extra_time) {
+    alert('Pareggio! Si giocano 2 minuti supplementari (Golden Goal): il primo gol vince. Se nessuno segna si va agli shootout.');
+  } else if (data.shootout) {
     alert(`Pareggio! Si va agli shotout (al meglio di ${SHOOTOUT_BEST_OF}).`);
+  }
+
+  eventCreateMode = false;
+  await loadMatchPage();
+}
+
+async function resolveExtraTime() {
+  const diff = Number(matchData.home_score || 0) !== Number(matchData.away_score || 0);
+  const msg = diff
+    ? 'Confermare il Golden Goal e terminare la partita?'
+    : 'Nessun gol nei supplementari: andare agli shootout?';
+  if (!confirm(msg)) return;
+
+  const res  = await fetch(`/matches/${matchId}/resolve-extratime`, { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) { alert(data.error || 'Errore supplementari'); return; }
+
+  if (data.shootout) {
+    alert(`Si va agli shootout (al meglio di ${SHOOTOUT_BEST_OF}): 2 punti al vincitore, 1 al perdente.`);
   }
 
   eventCreateMode = false;
@@ -894,19 +1032,28 @@ async function finishShootout() {
 async function createMatchEvent() {
   const event_type = document.getElementById('event-type').value;
   const team_id    = document.getElementById('event-team').value;
-  const player_id  = document.getElementById('event-player').value;
   const minute     = getCurrentMinute();
 
   const body = {
     match_id:  Number(matchId),
     team_id:   Number(team_id),
-    player_id: player_id ? Number(player_id) : null,
     event_type,
     minute
   };
 
+  // Carta speciale: giocatore opzionale, tipo carta in notes
+  if (event_type === 'special_card') {
+    const cardPlayer = document.getElementById('card-player').value;
+    body.player_id = cardPlayer ? Number(cardPlayer) : null;
+    body.notes     = document.getElementById('card-type-select').value;
+  } else {
+    const player_id = document.getElementById('event-player').value;
+    body.player_id  = player_id ? Number(player_id) : null;
+  }
+
   if (event_type === 'goal') {
-    body.goal_type = document.getElementById('goal-type').value;
+    body.goal_type   = document.getElementById('goal-type').value;
+    body.event_value = Number(document.getElementById('goal-value').value) || 1;
     if (body.goal_type === 'azione') {
       const assist = document.getElementById('assist-player').value;
       body.assist_player_id = assist ? Number(assist) : null;
@@ -1008,6 +1155,15 @@ function renderEditEventBox() {
             <option value="azione"    ${sel(e.goal_type,'azione')}>Azione</option>
             <option value="rigore"    ${sel(e.goal_type,'rigore')}>Rigore</option>
             <option value="punizione" ${sel(e.goal_type,'punizione')}>Punizione</option>
+            <option value="rigore_presidenziale" ${sel(e.goal_type,'rigore_presidenziale')}>Rigore Presidenziale</option>
+          </select>
+        </div>
+
+        <div class="admin-field" id="edit-goal-value-box">
+          <label>Valore gol</label>
+          <select id="edit-goal-value">
+            <option value="1" ${sel(Number(e.event_value) === 2 ? 2 : 1, 1)}>Normale</option>
+            <option value="2" ${sel(Number(e.event_value), 2)}>Doppio (×2)</option>
           </select>
         </div>
 
@@ -1079,12 +1235,14 @@ function handleEditTypeChange() {
   if (!type) return;
 
   document.getElementById('edit-goal-type-box').style.display     = 'none';
+  document.getElementById('edit-goal-value-box').style.display    = 'none';
   document.getElementById('edit-assist-box').style.display        = 'none';
   document.getElementById('edit-bonus-box').style.display         = 'none';
   document.getElementById('edit-bonus-outcome-box').style.display = 'none';
 
   if (type === 'goal') {
-    document.getElementById('edit-goal-type-box').style.display = 'flex';
+    document.getElementById('edit-goal-type-box').style.display  = 'flex';
+    document.getElementById('edit-goal-value-box').style.display = 'flex';
     updateEditAssistVisibility();
   }
   if (type === 'bonus') {
@@ -1133,7 +1291,8 @@ async function submitEditEvent() {
   };
 
   if (event_type === 'goal') {
-    body.goal_type = document.getElementById('edit-goal-type').value;
+    body.goal_type   = document.getElementById('edit-goal-type').value;
+    body.event_value = Number(document.getElementById('edit-goal-value').value) || 1;
     if (body.goal_type === 'azione') {
       const assist = document.getElementById('edit-assist-player').value;
       body.assist_player_id = assist ? Number(assist) : null;
@@ -1173,7 +1332,7 @@ function startTimer() {
   timerInterval = setInterval(() => {
     const el          = document.getElementById('match-timer');
     const minuteInput = document.getElementById('event-minute');
-    if (el)          el.textContent    = getTimerText();
+    if (el)          el.innerHTML      = renderClockHtml();
     if (minuteInput) minuteInput.value = getCurrentMinute();
   }, 1000);
 
@@ -1234,6 +1393,46 @@ function getTimerText() {
   return `${minutes}:${seconds}`;
 }
 
+/*
+  Orologio "stile calcio": conta il tempo in corso e, superati gli 8',
+  congela il display a fine tempo (8:00 / 16:00) e mostra il recupero +M:SS.
+  - 1° tempo: base 0:00, scorre da started_at
+  - 2° tempo: base 8:00 (un tempo), scorre da second_half_started_at
+*/
+function currentHalfMs() {
+  const start = parseStartedAt();
+  if (!start) return { base: 0, half: 0 };
+
+  const now   = new Date();
+  const phase = matchData.phase;
+
+  if (phase === 'first_half') {
+    return { base: 0, half: Math.max(0, now - start) };
+  }
+  if (phase === 'second_half') {
+    const secondStart = parseDate(matchData.second_half_started_at);
+    return { base: HALF_MS, half: Math.max(0, secondStart ? (now - secondStart) : 0) };
+  }
+  // fasi non in gioco: fallback al tempo totale
+  return { base: 0, half: Math.max(0, getElapsedMs()) };
+}
+
+function renderClockHtml() {
+  const { base, half } = currentHalfMs();
+  const reg      = Math.min(half, HALF_MS);
+  const recupero = Math.max(0, half - HALF_MS);
+
+  const mainSec = Math.floor((base + reg) / 1000);
+  const main = `${String(Math.floor(mainSec / 60)).padStart(2, '0')}:${String(mainSec % 60).padStart(2, '0')}`;
+
+  if (recupero > 0) {
+    const rs  = Math.floor(recupero / 1000);
+    const rec = `${Math.floor(rs / 60)}:${String(rs % 60).padStart(2, '0')}`;
+    return `${main} <span class="recupero-badge" title="Recupero">+${rec}</span>`;
+  }
+  return main;
+}
+
 function toDateTimeLocal(value) {
   const d = new Date(value);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -1290,6 +1489,7 @@ function renderStatus(status, phase) {
       case 'first_half':  return '🔴 LIVE · 1° Tempo';
       case 'halftime':    return '⏸ Intervallo';
       case 'second_half': return '🔴 LIVE · 2° Tempo';
+      case 'extra_time':  return '⚽ Supplementari · Golden Goal';
       case 'shootout':    return '🥅 Shotout';
       default:            return '🔴 LIVE';
     }

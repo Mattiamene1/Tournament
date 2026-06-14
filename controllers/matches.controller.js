@@ -81,10 +81,30 @@ async function finishMatch(req, res) {
   try {
     const result = await Match.finishMatch(req.params.id);
     const updatedMatch = await Match.getMatchById(req.params.id);
-    res.json({ success: true, shootout: result.shootout, match: updatedMatch });
+    res.json({
+      success: true,
+      extra_time: result.extra_time,
+      shootout: result.shootout,
+      match: updatedMatch
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
+  }
+}
+
+async function resolveExtraTime(req, res) {
+  try {
+    const result = await Match.resolveExtraTime(req.params.id);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({
+      success: true,
+      finished: result.finished,
+      shootout: result.shootout,
+      match: updatedMatch
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 }
 
@@ -255,6 +275,7 @@ module.exports = {
   deleteMatch,
   startMatch,
   finishMatch,
+  resolveExtraTime,
   endFirstHalf,
   startSecondHalf,
   updateShootoutScore,

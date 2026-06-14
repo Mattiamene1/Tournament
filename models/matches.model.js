@@ -214,21 +214,22 @@ async function finishMatch(id) {
     [id]
   );
   const match = rows[0];
-  if (!match || match.status !== 'live') return { shootout: false };
+  if (!match || match.status !== 'live') return { extra_time: false, shootout: false };
 
   const isDraw = Number(match.home_score || 0) === Number(match.away_score || 0);
 
   if (isDraw) {
+    // Pareggio a fine 2° tempo → 2 minuti supplementari (Golden Goal)
     await db.execute(
       `
       UPDATE matches
-      SET phase = 'shootout'
+      SET phase = 'extra_time'
       WHERE id = ?
         AND status = 'live'
       `,
       [id]
     );
-    return { shootout: true };
+    return { extra_time: true, shootout: false };
   }
 
   await db.execute(
@@ -242,7 +243,54 @@ async function finishMatch(id) {
     `,
     [id]
   );
-  return { shootout: false };
+  return { extra_time: false, shootout: false };
+}
+
+/*
+  Risolve i tempi supplementari (Golden Goal).
+  - se una squadra è in vantaggio → vittoria, partita chiusa (3/0 in classifica)
+  - se ancora in parità (nessun gol nei 2') → si va agli shootout
+  Ritorna { finished, shootout }.
+*/
+async function resolveExtraTime(id) {
+  const [rows] = await db.execute(
+    `SELECT status, phase, home_score, away_score FROM matches WHERE id = ?`,
+    [id]
+  );
+  const match = rows[0];
+  if (!match || match.status !== 'live' || match.phase !== 'extra_time') {
+    throw new Error('La partita non è nei tempi supplementari.');
+  }
+
+  const isDraw = Number(match.home_score || 0) === Number(match.away_score || 0);
+
+  if (!isDraw) {
+    await db.execute(
+      `
+      UPDATE matches
+      SET status = 'finished',
+          phase = 'ended',
+          ended_at = UTC_TIMESTAMP()
+      WHERE id = ?
+        AND status = 'live'
+        AND phase = 'extra_time'
+      `,
+      [id]
+    );
+    return { finished: true, shootout: false };
+  }
+
+  await db.execute(
+    `
+    UPDATE matches
+    SET phase = 'shootout'
+    WHERE id = ?
+      AND status = 'live'
+      AND phase = 'extra_time'
+    `,
+    [id]
+  );
+  return { finished: false, shootout: true };
 }
 
 /* Aggiorna il punteggio dei rigori (side: 'home' | 'away', delta: +1 / -1) */
@@ -702,6 +750,7 @@ module.exports = {
   deleteMatch,
   startMatch,
   finishMatch,
+  resolveExtraTime,
   endFirstHalf,
   startSecondHalf,
   updateShootoutScore,

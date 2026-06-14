@@ -277,6 +277,50 @@ async function updateMatchScore(matchId, teamId, goalsToAdd = 1) {
   return true;
 }
 
+/* =========================
+   CONTA GOL DI UN CERTO goal_type PER UNA SQUADRA
+   (usato per limitare es. il Rigore Presidenziale a 1 per squadra)
+========================= */
+async function countGoalType(matchId, teamId, goalType, excludeId = null) {
+  let sql = `
+    SELECT COUNT(*) AS c
+      FROM match_events
+     WHERE match_id = ?
+       AND team_id = ?
+       AND event_type = 'goal'
+       AND goal_type = ?
+  `;
+  const params = [matchId, teamId, goalType];
+
+  if (excludeId) {
+    sql += ' AND id <> ?';
+    params.push(excludeId);
+  }
+
+  const [rows] = await db.execute(sql, params);
+  return Number(rows[0].c || 0);
+}
+
+/* Conta gli eventi di un certo event_type per una squadra in una partita */
+async function countEventType(matchId, teamId, eventType, excludeId = null) {
+  let sql = `
+    SELECT COUNT(*) AS c
+      FROM match_events
+     WHERE match_id = ?
+       AND team_id = ?
+       AND event_type = ?
+  `;
+  const params = [matchId, teamId, eventType];
+
+  if (excludeId) {
+    sql += ' AND id <> ?';
+    params.push(excludeId);
+  }
+
+  const [rows] = await db.execute(sql, params);
+  return Number(rows[0].c || 0);
+}
+
 module.exports = {
   createMatchEvent,
   getMatchEvents,
@@ -284,5 +328,7 @@ module.exports = {
   updateMatchEvent,
   deleteMatchEvent,
   updateMatchScoreAfterGoal,
-  updateMatchScore
+  updateMatchScore,
+  countGoalType,
+  countEventType
 };
