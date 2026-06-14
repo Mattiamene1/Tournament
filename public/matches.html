@@ -16,6 +16,13 @@
 
   <link rel="stylesheet" href="./custom.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    /* Fasi senza lampeggio del LIVE */
+    .match-status.halftime { color: #d97706; animation: none; }
+    .match-status.shootout { color: #7c3aed; animation: none; }
+    .shootout-score-inline { color: #7c3aed; font-weight: 800; font-size: .85em; }
+  </style>
 </head>
 
 <body class="bg-slate-50">
@@ -85,9 +92,9 @@ async function loadMatches() {
 
           </div>
 
-          <div class="match-status ${matchData.status}">
-            ${renderStatus(matchData.status)}
-            ${matchData.status === 'live'
+          <div class="match-status ${statusClass(matchData)}">
+            ${renderStatus(matchData)}
+            ${isRunning(matchData)
               ? `<span class="live-timer-inline">⏱ <span class="match-list-timer" data-started-at="${matchData.started_at}">00:00</span></span>`
               : ''
             }
@@ -126,22 +133,50 @@ function getTeamLogo(name) {
 
 function renderScore(match) {
   if (match.status === 'finished' || match.status === 'live') {
-    return `${match.home_score} - ${match.away_score}`;
+    const base = `${match.home_score || 0} - ${match.away_score || 0}`;
+    if (hadShootout(match)) {
+      return `${base} <span class="shootout-score-inline">(${match.home_shootout_score || 0}-${match.away_shootout_score || 0})</span>`;
+    }
+    return base;
   }
 
   return 'VS';
 }
 
-function renderStatus(status) {
+function hadShootout(match) {
+  return match.phase === 'shootout' ||
+         (Number(match.home_shootout_score || 0) + Number(match.away_shootout_score || 0)) > 0;
+}
+
+function statusClass(match) {
+  if (match.status === 'live' && match.phase === 'halftime') return 'halftime';
+  if (match.status === 'live' && match.phase === 'shootout') return 'shootout';
+  return match.status;
+}
+
+function isRunning(match) {
+  return match.status === 'live' &&
+         (match.phase === 'first_half' || match.phase === 'second_half');
+}
+
+function renderStatus(match) {
+  const status = match.status;
+  const phase  = match.phase;
+
+  if (status === 'live') {
+    switch (phase) {
+      case 'first_half':  return '🔴 LIVE · 1° Tempo';
+      case 'halftime':    return '⏸ Intervallo';
+      case 'second_half': return '🔴 LIVE · 2° Tempo';
+      case 'shootout':    return '🥅 Shotout';
+      default:            return '🔴 LIVE';
+    }
+  }
+
   switch (status) {
-    case 'scheduled':
-      return '🕒 In programma';
-    case 'live':
-      return '🔴 LIVE';
-    case 'finished':
-      return '✅ Terminata';
-    default:
-      return status;
+    case 'scheduled': return '🕒 In programma';
+    case 'finished':  return hadShootout(match) ? '✅ Terminata (dopo shotout)' : '✅ Terminata';
+    default:          return status;
   }
 }
 
