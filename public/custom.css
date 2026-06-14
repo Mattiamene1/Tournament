@@ -61,6 +61,11 @@ img { max-width: 100%; }
   gap: 12px;
 }
 
+.general-link {
+  text-decoration: none;
+  color: inherit;
+}
+
 .navbar nav {
   display: flex;
   flex-wrap: wrap;
