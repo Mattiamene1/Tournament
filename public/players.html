@@ -72,17 +72,6 @@
             </div>
 
             <div class="admin-field">
-                <label>Rating *</label>
-                <select id="player-rating">
-                    <option value="1">1 ⭐</option>
-                    <option value="2">2 ⭐⭐</option>
-                    <option value="3">3 ⭐⭐⭐</option>
-                    <option value="4">4 ⭐⭐⭐⭐</option>
-                    <option value="5">5 ⭐⭐⭐⭐⭐</option>
-                </select>
-            </div>
-
-            <div class="admin-field">
                 <label>Numero maglia *</label>
                 <input id="player-shirt-number" type="number" min="0" placeholder="Es. 10">
             </div>
@@ -200,12 +189,11 @@
     const first_name   = document.getElementById('player-first-name').value.trim();
     const last_name    = document.getElementById('player-last-name').value.trim();
     const role         = document.getElementById('player-role').value;
-    const rating       = document.getElementById('player-rating').value;
     const shirt_number = document.getElementById('player-shirt-number').value;
     const team_id      = document.getElementById('player-team').value;
     const photo        = document.getElementById('player-photo').files[0];
 
-    if (!first_name || !last_name || !role || !rating || !shirt_number) {
+    if (!first_name || !last_name || !role || !shirt_number) {
       alert('Compila tutti i campi obbligatori');
       return;
     }
@@ -214,7 +202,6 @@
     formData.append('first_name',   first_name);
     formData.append('last_name',    last_name);
     formData.append('role',         role);
-    formData.append('rating',       rating);
     formData.append('shirt_number', shirt_number);
     if (team_id) formData.append('team_id', team_id);
     if (photo)   formData.append('photo',   photo);
@@ -236,7 +223,6 @@
     document.getElementById('player-first-name').value  = '';
     document.getElementById('player-last-name').value   = '';
     document.getElementById('player-role').value        = 'POR';
-    document.getElementById('player-rating').value      = '1';
     document.getElementById('player-shirt-number').value = '';
     document.getElementById('player-team').value        = '';
     document.getElementById('player-photo').value       = '';
@@ -273,10 +259,6 @@
 
     const roleOptionsHtml = (current) => ['POR','DIF','CEN','ATT','PRE'].map(r =>
       `<option value="${r}" ${r === current ? 'selected' : ''}>${roleLabel(r)}</option>`
-    ).join('');
-
-    const ratingOptionsHtml = (current) => [1,2,3,4,5].map(v =>
-      `<option value="${v}" ${v == current ? 'selected' : ''}>${v} ${'⭐'.repeat(v)}</option>`
     ).join('');
 
     container.innerHTML = players.map(player => `
@@ -357,13 +339,6 @@
                   `value="${player.team_id}"`,
                   `value="${player.team_id}" selected`
                 )}
-              </select>
-            </div>
-
-            <div class="edit-field">
-              <label>Rating (1–5)</label>
-              <select id="ep-rating-${player.id}">
-                ${ratingOptionsHtml(player.rating)}
               </select>
             </div>
 
@@ -474,7 +449,6 @@
       last_name:    document.getElementById(`ep-last_name-${id}`).value.trim(),
       role,
       team_id:      document.getElementById(`ep-team-${id}`).value || null,
-      rating:       document.getElementById(`ep-rating-${id}`).value,
       shirt_number: role !== 'PRE'
                       ? (document.getElementById(`ep-shirt_number-${id}`).value || null)
                       : null
@@ -507,11 +481,6 @@
   }
 
   /* ── Helpers ───────────────────────────────────────────────── */
-  function renderStars(rating) {
-    return Array.from({ length: Number(rating || 0) })
-      .map(() => `<i class="fa-solid fa-star"></i>`)
-      .join('');
-  }
 
   function roleLabel(role) {
     return { POR:'POR', DIF:'DIF', CEN:'CEN',

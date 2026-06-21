@@ -306,6 +306,11 @@ function renderMatchHeader() {
       <i class="fa-solid ${scheduleEditMode ? 'fa-xmark' : 'fa-pen'}"></i>
     </button>` : '';
 
+  const deleteBtn = logged ? `
+    <button class="match-datetime-delete-toggle" onclick="deleteMatch()" title="Elimina partita">
+      <i class="fa-solid fa-trash"></i>
+    </button>` : '';
+
   let stateBtns = '';
   if (logged) {
     if (matchData.status === 'scheduled') {
@@ -364,6 +369,7 @@ function renderMatchHeader() {
         <span class="match-date">${formatDate(matchData.match_date)}</span>
         ${pitchHtml}
         ${editBtn}
+        ${deleteBtn}
       </div>
       <div class="match-header-center">${stateBtns}</div>
       ${groupHtml}
@@ -922,6 +928,20 @@ async function updateSchedule() {
 
   scheduleEditMode = false;
   await loadMatchPage();
+}
+
+async function deleteMatch() {
+  if (!confirm('Eliminare definitivamente questa partita? L\'operazione non è reversibile.')) return;
+
+  const res = await fetch(`/matches/${matchId}`, { method: 'DELETE' });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    alert(error.error || 'Errore eliminazione partita');
+    return;
+  }
+
+  window.location.href = 'matches.html';
 }
 
 async function startMatch() {

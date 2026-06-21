@@ -213,9 +213,6 @@
                     <option value="CEN">CEN</option>
                     <option value="ATT">ATT</option>
                 </select>
-                <select id="new-rating">
-                    ${[1,2,3,4,5].map(n => `<option value="${n}">${n} stelle</option>`).join('')}
-                </select>
                 <button onclick="createPlayer()">Crea</button>
             </div>`;
     }
@@ -285,20 +282,8 @@
                             </select>
 
                             <label><i class="fa-solid fa-star"></i></label>
-                            <select id="rating-${p.id}">
-                                ${[1,2,3,4,5].map(n => `
-                                    <option value="${n}" ${Number(p.rating || 1) === n ? 'selected' : ''}>${n}</option>
-                                `).join('')}
-                            </select>
 
                             <button onclick="updatePlayer(${p.id})">Salva</button>
-                        </div>
-                        `
-                        : logged
-                        ? `
-                        <div class="player-rating stars">
-                            ${renderStars(p.rating)}
-                            <span class="rating-number">(${Number(p.rating || 0)})</span>
                         </div>
                         `
                         : ''
@@ -451,18 +436,6 @@
         return roles;
     }
 
-    function renderStars(rating) {
-        const value = Number(rating || 0);
-
-        if (value <= 0) {
-            return `<span class="rating-empty">Nessuna stella</span>`;
-        }
-
-        return Array.from({ length: value })
-            .map(() => `<i class="fa-solid fa-star"></i>`)
-            .join('');
-    }
-
     function renderScore(match) {
         if (match.status === 'finished' || match.status === 'live') {
             return `${match.home_score} - ${match.away_score}`;
@@ -585,15 +558,13 @@
     async function updatePlayer(playerId) {
         const shirt_number = Number(document.getElementById(`shirt-number-${playerId}`).value);
         const role = document.getElementById(`role-${playerId}`).value;
-        const rating = Number(document.getElementById(`rating-${playerId}`).value);
 
         const res = await fetch(`/players/${playerId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 shirt_number,
-                role,
-                rating
+                role
             })
         });
 
@@ -627,7 +598,6 @@
         const last_name = document.getElementById('new-last-name').value.trim();
         const shirt_number = Number(document.getElementById('new-shirt-number').value);
         const role = document.getElementById('new-role').value;
-        const rating = Number(document.getElementById('new-rating').value);
 
         if (!first_name || !last_name || !role) {
             alert('Nome, cognome e ruolo sono obbligatori');
@@ -642,7 +612,6 @@
                 last_name,
                 shirt_number,
                 role,
-                rating,
                 team_id: Number(teamId)
             })
         });

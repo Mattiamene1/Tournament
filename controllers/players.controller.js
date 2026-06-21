@@ -75,8 +75,7 @@ async function getPlayers(req, res) {
       first_name:  req.query.first_name,
       last_name:   req.query.last_name,
       role:        req.query.role,
-      team_id:     req.query.team_id,
-      rating:      req.query.rating
+      team_id:     req.query.team_id
     };
 
     const players = await Player.getPlayers(filters);
@@ -100,13 +99,12 @@ async function getPlayerById(req, res) {
 async function updatePlayer(req, res) {
   try {
     const { id } = req.params;
-    const { first_name, last_name, role, rating, shirt_number } = req.body;
+    const { first_name, last_name, role, shirt_number } = req.body;
 
     const data = {};
     if (first_name   !== undefined) data.first_name   = first_name;
     if (last_name    !== undefined) data.last_name    = last_name;
     if (role         !== undefined) data.role         = role;
-    if (rating       !== undefined) data.rating       = Number(rating || 0);
     if (shirt_number !== undefined) data.shirt_number = Number(shirt_number || 0);
 
     await Player.updatePlayer(id, data);

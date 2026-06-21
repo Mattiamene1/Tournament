@@ -623,6 +623,28 @@ h3 {
   font-weight: 700;
 }
 
+.match-datetime-delete-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.match-datetime-delete-toggle:hover {
+  transform: scale(1.03);
+  filter: brightness(1.05);
+}
+
 .schedule-edit-box {
   margin: 12px 0 18px;
   padding: 12px 14px;

@@ -77,8 +77,7 @@ async function getTeamsWithPlayers() {
       p.first_name,
       p.last_name,
       p.role,
-      p.shirt_number,
-      p.rating
+      p.shirt_number
     FROM teams t
     LEFT JOIN players p ON p.team_id = t.id
     ORDER BY t.name ASC, p.role ASC, p.shirt_number ASC
@@ -101,8 +100,7 @@ async function getTeamsWithPlayers() {
         first_name: row.first_name,
         last_name: row.last_name,
         role: row.role,
-        shirt_number: row.shirt_number,
-        rating: row.rating
+        shirt_number: row.shirt_number
       });
     }
   });

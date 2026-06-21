@@ -142,13 +142,6 @@
                     `
                     : ''
                 }
-                ${
-                  logged
-                    ? `<span class="player-rating">
-                        ${renderStars(p.rating)}
-                      </span>`
-                    : ''
-                }
               </div>
             </div>
 
@@ -218,14 +211,6 @@
   function goToTeam(id) {
     if (id === undefined || id === null) return;
     window.location.href = `team.html?id=${id}`;
-  }
-
-  function renderStars(rating) {
-    rating = Number.parseInt(rating);
-
-    return Array.from({ length: rating })
-      .map(() => `<i class="fa-solid fa-star"></i>`)
-      .join('');
   }
 
   async function uploadPlayerPhoto(id) {

@@ -4,15 +4,14 @@ const db = require('../_db/mysql');
 async function createPlayer(data) {
   const sql = `
     INSERT INTO players
-      (first_name, last_name, role, rating, shirt_number, team_id)
-    VALUES (?, ?, ?, ?, ?, ?)
+      (first_name, last_name, role, shirt_number, team_id)
+    VALUES (?, ?, ?, ?, ?)
   `;
 
   const params = [
     data.first_name,
     data.last_name,
     data.role,
-    data.rating,
     data.shirt_number,
     data.team_id || null
   ];
@@ -52,11 +51,6 @@ async function getPlayers(filters = {}) {
   if (filters.team_id) {
     sql += ' AND p.team_id = ?';
     params.push(filters.team_id);
-  }
-
-  if (filters.rating) {
-    sql += ' AND p.rating = ?';
-    params.push(filters.rating);
   }
 
   sql += `
@@ -101,11 +95,6 @@ async function updatePlayer(id, data) {
   if (data.role !== undefined) {
     fields.push('role = ?');
     params.push(data.role);
-  }
-
-  if (data.rating !== undefined) {
-    fields.push('rating = ?');
-    params.push(Number(data.rating || 0));
   }
 
   if (data.shirt_number !== undefined) {
