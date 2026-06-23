@@ -145,7 +145,9 @@ async function startMatch(id) {
     UPDATE matches
     SET status = 'live',
         phase = 'first_half',
-        started_at = UTC_TIMESTAMP()
+        started_at = UTC_TIMESTAMP(),
+        paused_at = NULL,
+        paused_ms = 0
     WHERE id = ?
       AND status = 'scheduled'
     `,
@@ -175,7 +177,8 @@ async function endFirstHalf(id) {
     `
     UPDATE matches
     SET phase = 'halftime',
-        first_half_ended_at = UTC_TIMESTAMP()
+        first_half_ended_at = UTC_TIMESTAMP(),
+        paused_at = NULL
     WHERE id = ?
       AND status = 'live'
       AND phase = 'first_half'
@@ -191,10 +194,47 @@ async function startSecondHalf(id) {
     `
     UPDATE matches
     SET phase = 'second_half',
-        second_half_started_at = UTC_TIMESTAMP()
+        second_half_started_at = UTC_TIMESTAMP(),
+        paused_at = NULL,
+        paused_ms = 0
     WHERE id = ?
       AND status = 'live'
       AND phase = 'halftime'
+    `,
+    [id]
+  );
+  return true;
+}
+
+/* =========================
+   PAUSA / RIPRESA CRONOMETRO
+   - pauseTimer: registra l'istante di pausa (solo se in gioco e non già in pausa)
+   - resumeTimer: somma la durata della pausa a paused_ms e azzera paused_at
+========================= */
+async function pauseTimer(id) {
+  await db.execute(
+    `
+    UPDATE matches
+    SET paused_at = UTC_TIMESTAMP()
+    WHERE id = ?
+      AND status = 'live'
+      AND phase IN ('first_half', 'second_half')
+      AND paused_at IS NULL
+    `,
+    [id]
+  );
+  return true;
+}
+
+async function resumeTimer(id) {
+  await db.execute(
+    `
+    UPDATE matches
+    SET paused_ms = paused_ms + TIMESTAMPDIFF(MICROSECOND, paused_at, UTC_TIMESTAMP()) / 1000,
+        paused_at = NULL
+    WHERE id = ?
+      AND status = 'live'
+      AND paused_at IS NOT NULL
     `,
     [id]
   );
@@ -332,7 +372,7 @@ async function recomputeShootoutScore(matchId) {
   const [rows] = await db.execute(
     `SELECT team_id, COUNT(*) AS made
        FROM match_events
-      WHERE match_id = ? AND goal_type = 'shootout' AND event_type = 'goal'
+      WHERE match_id = ? AND goal_type = 'shootout' AND event_type = 'goal' AND minute IS NULL
       GROUP BY team_id`,
     [matchId]
   );
@@ -361,7 +401,7 @@ async function getShootoutSummary(matchId) {
   const [rows] = await db.execute(
     `SELECT team_id, event_type, COUNT(*) AS c
        FROM match_events
-      WHERE match_id = ? AND goal_type = 'shootout'
+      WHERE match_id = ? AND goal_type = 'shootout' AND minute IS NULL
       GROUP BY team_id, event_type`,
     [matchId]
   );
@@ -753,6 +793,8 @@ module.exports = {
   resolveExtraTime,
   endFirstHalf,
   startSecondHalf,
+  pauseTimer,
+  resumeTimer,
   updateShootoutScore,
   finishShootout,
 

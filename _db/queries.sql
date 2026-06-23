@@ -112,6 +112,9 @@ ALTER TABLE matches ADD COLUMN ended_at DATETIME NULL;
 ALTER TABLE matches
   ADD COLUMN round VARCHAR(16) NULL DEFAULT NULL,
   ADD COLUMN slot  VARCHAR(16) NULL DEFAULT NULL;
+ALTER TABLE matches
+  ADD COLUMN paused_at DATETIME NULL DEFAULT NULL,
+  ADD COLUMN paused_ms BIGINT NOT NULL DEFAULT 0;
 /*--------------------------------------*/
 
 CREATE TABLE bonuses (
@@ -357,3 +360,31 @@ INSERT INTO matches (
 -- Gruppo B - Sabato
 (2, 5, 7, '2026-05-23 08:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL),
 (2, 6, 8, '2026-05-23 09:30:00', 1, 1, 'scheduled', 'not_started', 0, 0, NULL, NULL);
+
+-- Reset Game
+-- ⬇️ '*' = TUTTE le partite | oppure un id specifico es. '123'
+SET @match_id = '1';
+
+START TRANSACTION;
+
+-- 1) elimina gli eventi
+DELETE FROM match_events
+WHERE @match_id = '*'
+   OR (@match_id <> '*' AND match_id = @match_id);
+
+-- 2) resetta lo/gli stato/i allo stato di default
+UPDATE matches
+SET status                 = 'scheduled',
+    phase                  = 'not_started',
+    home_score             = 0,
+    away_score             = 0,
+    home_shootout_score    = 0,
+    away_shootout_score    = 0,
+    started_at             = NULL,
+    ended_at               = NULL,
+    first_half_ended_at    = NULL,
+    second_half_started_at = NULL
+WHERE @match_id = '*'
+   OR (@match_id <> '*' AND id = @match_id);
+
+COMMIT;

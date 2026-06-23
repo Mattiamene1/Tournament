@@ -37,6 +37,35 @@
       vertical-align: middle;
     }
 
+    /* Badge dado Wildcard (i 2' dopo il tempo regolamentare) */
+    .dado-badge {
+      display: inline-block;
+      background: #7c3aed;
+      color: #fff;
+      font-size: .72em;
+      font-weight: 800;
+      padding: 1px 7px;
+      border-radius: 999px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    /* Lampeggio del pulsante "Fine 1° tempo" a dado scaduto */
+    @keyframes btn-blink {
+      0%, 100% { opacity: 1;   box-shadow: 0 0 0 0 rgba(217,119,6,.6); }
+      50%      { opacity: .55; box-shadow: 0 0 0 6px rgba(217,119,6,0); }
+    }
+    .match-state-btn.blink {
+      animation: btn-blink 1s ease-in-out infinite;
+      background: #d97706 !important;
+      color: #fff !important;
+    }
+
+    /* Pulsante pausa/ripresa */
+    .match-state-btn.pause { background: #475569; color: #fff; }
+    .match-state-btn.resume { background: #16a34a; color: #fff; }
+    .match-status.paused { color: #475569; animation: none; }
+
     .shootout-panel {
       margin: 16px 0;
       padding: 18px;
@@ -44,6 +73,12 @@
       border-radius: 14px;
       background: #faf5ff;
     }
+    /* Pannello dado: stesso layout, accento diverso per distinguerlo */
+    .shootout-panel.dado-panel {
+      border-color: #16a34a;
+      background: #f0fdf4;
+    }
+    .shootout-panel.dado-panel h3 { color: #166534; }
     .shootout-panel h3 {
       margin: 0 0 4px;
       color: #7c3aed;
@@ -226,6 +261,11 @@ const SHOOTOUT_BEST_OF = 5;
 const HALF_MINUTES = 8;
 const HALF_MS = HALF_MINUTES * 60000;
 
+// Dado Wildcard: dura 2' dopo il tempo regolamentare del 1° tempo.
+// Scaduti, il pulsante "Fine 1° tempo" lampeggia.
+const DICE_MINUTES = 2;
+const DICE_MS = DICE_MINUTES * 60000;
+
 // Carte speciali del 2° tempo (id salvato in notes → etichetta)
 const SPECIAL_CARDS = {
   rigore:      'Rigore',
@@ -234,6 +274,15 @@ const SPECIAL_CARDS = {
   star_player: 'Star Player',
   gol_doppio:  'Gol Doppio',
   jolly:       'Jolly'
+};
+
+// Esiti del dado Wildcard (codice salvato in notes → etichetta)
+const DICE_MODES = {
+  '3v3':        '3 vs 3',
+  '2v2':        '2 vs 2',
+  '1v1':        '1 vs 1',
+  '3_shootout': '3 Shootout',
+  '3_rigori':   '3 Rigori'
 };
 
 const params = new URLSearchParams(window.location.search);
@@ -246,9 +295,11 @@ let awayPlayers = [];
 let bonuses = [];
 let pitches = [];
 let timerInterval = null;
+let autoPauseInFlight = false;
 
 let scheduleEditMode = false;
 let eventCreateMode = false;
+let dadoKickMode = false;
 let editEventId = null;
 let allEvents = [];
 
@@ -313,6 +364,13 @@ function renderMatchHeader() {
 
   let stateBtns = '';
   if (logged) {
+    const pauseBtn = `
+        <button class="match-state-btn ${isPaused() ? 'resume' : 'pause'}"
+                onclick="${isPaused() ? 'resumeTimer()' : 'pauseTimer()'}">
+          <i class="fa-solid ${isPaused() ? 'fa-play' : 'fa-pause'}"></i>
+          ${isPaused() ? 'Riprendi' : 'Pausa'}
+        </button>`;
+
     if (matchData.status === 'scheduled') {
       stateBtns = `
         <button class="match-state-btn" onclick="startMatch()">
@@ -320,9 +378,9 @@ function renderMatchHeader() {
         </button>`;
     } else if (matchData.status === 'live' && matchData.phase === 'first_half') {
       stateBtns = `
-        <button class="match-state-btn" onclick="endFirstHalf()">
+        <button id="btn-end-first-half" class="match-state-btn" onclick="endFirstHalf()">
           <i class="fa-solid fa-hourglass-half"></i> Fine 1° tempo
-        </button>`;
+        </button>` + pauseBtn;
     } else if (matchData.status === 'live' && matchData.phase === 'halftime') {
       stateBtns = `
         <button class="match-state-btn" onclick="startSecondHalf()">
@@ -332,7 +390,7 @@ function renderMatchHeader() {
       stateBtns = `
         <button class="match-state-btn danger" onclick="finishMatch()">
           <i class="fa-solid fa-flag-checkered"></i> Termina partita
-        </button>`;
+        </button>` + pauseBtn;
     } else if (matchData.status === 'live' && matchData.phase === 'extra_time') {
       const diff = Number(matchData.home_score || 0) !== Number(matchData.away_score || 0);
       stateBtns = diff
@@ -419,8 +477,12 @@ function renderMatchStatus() {
   if (matchData.status === 'live' && phase === 'halftime')   statusClass = 'halftime';
   if (matchData.status === 'live' && phase === 'shootout')   statusClass = 'shootout';
   if (matchData.status === 'live' && phase === 'extra_time') statusClass = 'extratime';
+  if (running && isPaused())                                  statusClass = 'paused';
 
-  return `<div class="match-status ${statusClass}"><span>${renderStatus(matchData.status, phase)}</span>${timer}${shootout}</div>`;
+  const pausedTag = (running && isPaused())
+    ? ' <span class="dado-badge" style="background:#475569;">⏸ In pausa</span>' : '';
+
+  return `<div class="match-status ${statusClass}"><span>${renderStatus(matchData.status, phase)}</span>${timer}${pausedTag}${shootout}</div>`;
 }
 
 function renderReferee() {
@@ -468,6 +530,8 @@ function renderMatch(events) {
       ${renderReferee()}
     </div>
     ${logged && inShootout ? renderShootoutPanel() : ''}
+    ${logged && inPlay && activeDadoKind() ? renderDadoButton() : ''}
+    ${logged && inPlay && dadoKickMode && activeDadoKind() ? renderDadoPanel(activeDadoKind()) : ''}
     ${renderAddEventButton()}
     ${inPlay && eventCreateMode ? renderAddEventBox() : ''}
     ${logged && editEventId ? renderEditEventBox() : ''}
@@ -478,11 +542,12 @@ function renderMatch(events) {
   if (logged && editEventId) initEditEventBox();
 }
 
-// Tiri shootout di un lato (eventi con goal_type='shootout')
+// Tiri dello shootout FINALE di un lato: eventi goal_type='shootout' SENZA minuto
+// (i tiri dal pannello non hanno minuto; un gol "shootout" giocato in partita sì)
 function shootoutKicks(side) {
   const teamId = side === 'home' ? matchData.home_team_id : matchData.away_team_id;
   return allEvents.filter(e =>
-    e.goal_type === 'shootout' && String(e.team_id) === String(teamId)
+    e.goal_type === 'shootout' && e.minute == null && String(e.team_id) === String(teamId)
   );
 }
 
@@ -574,6 +639,157 @@ function renderShootoutPanel() {
     </div>`;
 }
 
+/* ============================================================
+   DADO: shootout / rigori (mini-serie da 3 tiri per squadra)
+   I tiri sono salvati come eventi normali con notes='dado_kick':
+   - segnato → event_type='goal' (CONTA nel punteggio partita)
+   - sbagliato → event_type='shootout_miss'
+   Sono distinti dagli shootout finali (che hanno minute NULL).
+============================================================ */
+const DADO_MAX_KICKS = 3;
+
+// Tipo attivo del dado: 'shootout' | 'rigore' | null (in base all'ultimo evento Dado)
+function activeDadoKind() {
+  const dados = (allEvents || []).filter(e => e.event_type === 'dado');
+  if (!dados.length) return null;
+  const last = dados[dados.length - 1];   // allEvents è ordinato per minuto/id crescente
+  if (last.notes === '3_shootout') return 'shootout';
+  if (last.notes === '3_rigori')   return 'rigore';
+  return null;
+}
+
+function dadoKicks(side) {
+  const teamId = side === 'home' ? matchData.home_team_id : matchData.away_team_id;
+  return (allEvents || []).filter(e =>
+    e.notes === 'dado_kick' && String(e.team_id) === String(teamId)
+  );
+}
+
+function dadoPlayerOptions(side) {
+  const all = side === 'home' ? homePlayers : awayPlayers;
+  const expelled = expelledPlayerIds();
+  return all
+    .filter(p => p.role !== 'PRE' && !expelled.has(Number(p.id)))
+    .map(p => `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`)
+    .join('');
+}
+
+function renderDadoKickList(side) {
+  const kicks = dadoKicks(side);
+  if (!kicks.length) return '<div class="so-empty">Nessun tiro</div>';
+
+  return kicks.map(e => {
+    const made = e.event_type === 'goal';
+    const name = formatEventPlayerName(e) || '—';
+    return `
+      <div class="so-kick ${made ? 'made' : 'miss'}">
+        <span class="so-kick-icon">${made ? '⚽' : '✗'}</span>
+        <span class="so-kick-name">${e.shirt_number ? `#${e.shirt_number} ` : ''}${name}</span>
+        <button class="so-kick-del" title="Rimuovi tiro" onclick="removeDadoKick(${e.id})">✕</button>
+      </div>`;
+  }).join('');
+}
+
+function renderDadoTeam(side) {
+  const name  = side === 'home' ? matchData.home_team_name : matchData.away_team_name;
+  const selId = side === 'home' ? 'dk-player-home' : 'dk-player-away';
+  const kicks = dadoKicks(side);
+  const made  = kicks.filter(e => e.event_type === 'goal').length;
+  const att   = kicks.length;
+  const full  = att >= DADO_MAX_KICKS;
+
+  return `
+    <div class="shootout-team">
+      <div class="shootout-team-name">${formatTeamName(name)}</div>
+      <div class="shootout-count">${made}</div>
+      <div class="so-attempts">${att}/${DADO_MAX_KICKS} tiri</div>
+
+      <div class="so-add-row">
+        <select class="so-player-select" id="${selId}">
+          ${dadoPlayerOptions(side)}
+        </select>
+        <div class="so-add-btns">
+          <button class="so-add made" onclick="addDadoKick('${side}', true)"  ${full ? 'disabled' : ''}>⚽ Segnato</button>
+          <button class="so-add miss" onclick="addDadoKick('${side}', false)" ${full ? 'disabled' : ''}>✗ Sbagliato</button>
+        </div>
+      </div>
+
+      <div class="so-kicks">${renderDadoKickList(side)}</div>
+    </div>`;
+}
+
+function renderDadoPanel(kind) {
+  const title = kind === 'rigore' ? 'Rigori (dado)' : 'Shootout (dado)';
+  return `
+    <div class="shootout-panel dado-panel">
+      <h3><i class="fa-solid fa-dice"></i> ${title}</h3>
+      <div class="shootout-hint">3 tiri per squadra · le reti contano nel punteggio della partita</div>
+
+      <div class="shootout-grid">
+        ${renderDadoTeam('home')}
+        <div class="shootout-sep">-</div>
+        ${renderDadoTeam('away')}
+      </div>
+    </div>`;
+}
+
+function renderDadoButton() {
+  const kind = activeDadoKind();
+  if (!kind) return '';
+  const label = kind === 'rigore' ? 'Gestisci rigori (dado)' : 'Gestisci shootout (dado)';
+  return `
+    <div style="text-align:center; margin:12px 0;">
+      <button class="match-state-btn" onclick="toggleDadoKick()">
+        <i class="fa-solid fa-dice"></i> ${dadoKickMode ? 'Chiudi pannello dado' : label}
+      </button>
+    </div>`;
+}
+
+function toggleDadoKick() {
+  dadoKickMode = !dadoKickMode;
+  loadMatchPage();
+}
+
+async function addDadoKick(side, scored) {
+  const kind = activeDadoKind();
+  if (!kind) return;
+
+  const teamId   = side === 'home' ? matchData.home_team_id : matchData.away_team_id;
+  const sel      = document.getElementById(side === 'home' ? 'dk-player-home' : 'dk-player-away');
+  const playerId = sel ? sel.value : '';
+
+  if (!playerId) { alert('Seleziona il giocatore che ha tirato.'); return; }
+  if (dadoKicks(side).length >= DADO_MAX_KICKS) { alert(`Massimo ${DADO_MAX_KICKS} tiri per squadra.`); return; }
+
+  const body = {
+    match_id:   Number(matchId),
+    team_id:    Number(teamId),
+    player_id:  Number(playerId),
+    event_type: scored ? 'goal' : 'shootout_miss',
+    goal_type:  kind,                 // 'shootout' | 'rigore'
+    event_value: 1,
+    minute:     getCurrentMinute(),
+    notes:      'dado_kick'
+  };
+
+  const res  = await fetch('/match-events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) { alert(data.error || 'Errore tiro dado'); return; }
+  await loadMatchPage();
+}
+
+async function removeDadoKick(eventId) {
+  const res  = await fetch(`/match-events/${eventId}`, { method: 'DELETE' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { alert(data.error || 'Errore rimozione tiro'); return; }
+  await loadMatchPage();
+}
+
 function renderAddEventBox() {
   return `
     <div class="admin-box">
@@ -588,6 +804,7 @@ function renderAddEventBox() {
             <option value="yellow_card">Cartellino Giallo</option>
             <option value="red_card">Cartellino Rosso</option>
             <option value="bonus">Bonus</option>
+            <option value="dado">Dado</option>
             ${matchData.phase === 'second_half'
               ? '<option value="special_card">Carta speciale</option>' : ''}
           </select>
@@ -603,7 +820,7 @@ function renderAddEventBox() {
 
         <div class="admin-field">
           <label>Giocatore</label>
-          <select id="event-player"></select>
+          <select id="event-player" onchange="refreshAssistOptions()"></select>
         </div>
 
         <div class="admin-field" id="goal-type-box">
@@ -612,6 +829,7 @@ function renderAddEventBox() {
             <option value="azione">Azione</option>
             <option value="rigore">Rigore</option>
             <option value="punizione">Punizione</option>
+            <option value="shootout">Shootout</option>
             <option value="rigore_presidenziale">Rigore Presidenziale</option>
           </select>
         </div>
@@ -661,6 +879,13 @@ function renderAddEventBox() {
           </select>
         </div>
 
+        <div class="admin-field hidden" id="dado-box">
+          <label>Esito dado</label>
+          <select id="dado-mode">
+            ${Object.entries(DICE_MODES).map(([id, name]) => `<option value="${id}">${name}</option>`).join('')}
+          </select>
+        </div>
+
         <div class="admin-field minute-field">
           <label><i class="fa-solid fa-clock"></i> Minuto</label>
           <div class="minute-row">
@@ -693,17 +918,18 @@ function halfTimeDividerHtml() {
     </div>`;
 }
 
-function renderEventRow(e) {
+function eventCardHtml(e) {
   const isHome = String(e.team_id) === String(matchData.home_team_id);
   const playerName = e.player_name || formatEventPlayerName(e);
   const playerId   = e.player_id;
   const isCard     = e.event_type === 'special_card';
+  const noEdit     = isCard || e.notes === 'dado_kick';
 
-  const card = `
+  return `
     <div class="tl-card ${isHome ? 'tl-card--home' : ''}">
       ${logged ? `
         <div class="tl-actions">
-          ${isCard ? '' : `
+          ${noEdit ? '' : `
           <button class="tl-action edit" title="Modifica evento" onclick="openEditEvent(${e.id})">
             <i class="fa-solid fa-pen"></i>
           </button>`}
@@ -725,6 +951,11 @@ function renderEventRow(e) {
         </div>` : ''}
     </div>
   `;
+}
+
+function renderEventRow(e) {
+  const isHome = String(e.team_id) === String(matchData.home_team_id);
+  const card = eventCardHtml(e);
 
   return `
     <div class="tl-row">
@@ -738,9 +969,29 @@ function renderEventRow(e) {
   `;
 }
 
+// Riga unica per l'evento Dado: stesso evento registrato per entrambe le squadre
+function renderDadoComboRow(homeEvt, awayEvt) {
+  const minute = (homeEvt || awayEvt).minute;
+  return `
+    <div class="tl-row">
+      <div class="tl-home">${homeEvt ? eventCardHtml(homeEvt) : ''}</div>
+      <div class="tl-center">
+        <div class="tl-icon">🎲</div>
+        <div class="tl-minute">${minute}'</div>
+      </div>
+      <div class="tl-away">${awayEvt ? eventCardHtml(awayEvt) : ''}</div>
+    </div>
+  `;
+}
+
 function renderEvents(events) {
-  // I tiri dello shootout non vanno nella timeline: stanno solo nel pannello
-  events = (events || []).filter(e => e.goal_type !== 'shootout');
+  // Nascondo: i tiri dello shootout FINALE (senza minuto, nel pannello)
+  // e la riga dell'ESITO dado quando è "3 shootout"/"3 rigori"
+  // (in quei casi si stampano invece i singoli tiri del dado).
+  events = (events || []).filter(e =>
+    !(e.goal_type === 'shootout' && e.minute == null) &&
+    !(e.event_type === 'dado' && (e.notes === '3_shootout' || e.notes === '3_rigori'))
+  );
 
   const divider  = halfTimeDividerHtml();   // '' se 1° tempo non ancora finito
   const halfEnd  = halfTimeEndMinute();
@@ -752,12 +1003,35 @@ function renderEvents(events) {
 
   let dividerDone = false;
   const rows = [];
+  const consumed = new Set();
 
   events.forEach(e => {
+    if (consumed.has(e.id)) return;
+
     if (divider && !dividerDone && halfEnd !== null && Number(e.minute) > halfEnd) {
       rows.push(divider);
       dividerDone = true;
     }
+
+    // L'evento Dado è registrato per entrambe le squadre: unisco le due voci in una riga
+    if (e.event_type === 'dado') {
+      const partner = events.find(o =>
+        o.id !== e.id && !consumed.has(o.id) &&
+        o.event_type === 'dado' &&
+        o.notes === e.notes &&
+        String(o.minute) === String(e.minute) &&
+        String(o.team_id) !== String(e.team_id)
+      );
+      const eIsHome = String(e.team_id) === String(matchData.home_team_id);
+      const homeEvt = eIsHome ? e : partner;
+      const awayEvt = eIsHome ? partner : e;
+
+      rows.push(renderDadoComboRow(homeEvt, awayEvt));
+      consumed.add(e.id);
+      if (partner) consumed.add(partner.id);
+      return;
+    }
+
     rows.push(renderEventRow(e));
   });
 
@@ -776,9 +1050,12 @@ function eventIcon(type) {
   switch (type) {
     case 'goal':         return '⚽';
     case 'yellow_card':  return '🟨';
+    case 'second_yellow':return '🟨🟥';
     case 'red_card':     return '🟥';
     case 'bonus':        return '⭐';
     case 'special_card': return '🃏';
+    case 'dado':         return '🎲';
+    case 'shootout_miss':return '✗';
     default:             return '•';
   }
 }
@@ -788,21 +1065,31 @@ function goalTypeLabel(gt) {
     case 'azione':               return 'azione';
     case 'rigore':               return 'rigore';
     case 'punizione':            return 'punizione';
-    case 'rigore_presidenziale': return 'rigore presidenziale';
     case 'shootout':             return 'shootout';
+    case 'rigore_presidenziale': return 'rigore presidenziale';
     default:                     return gt || '';
   }
 }
 
 function eventLabel(e) {
+  // Tiri del dado (3 shootout / 3 rigori)
+  if (e.notes === 'dado_kick') {
+    const kindLabel = e.goal_type === 'rigore' ? 'Rigori' : 'Shootout';
+    const esito     = e.event_type === 'goal' ? 'GOL' : 'NO GOL';
+    return `dado - ${kindLabel} - ${esito}`;
+  }
   if (e.event_type === 'goal') {
     const dbl = Number(e.event_value) === 2 ? ' ×2' : '';
     return `Gol - ${goalTypeLabel(e.goal_type)}${dbl}`;
   }
   if (e.event_type === 'yellow_card') return 'Cartellino Giallo';
+  if (e.event_type === 'second_yellow') return 'Doppia ammonizione (espulsione)';
   if (e.event_type === 'red_card')    return 'Cartellino Rosso';
   if (e.event_type === 'special_card') {
     return `Carta: ${SPECIAL_CARDS[e.notes] || e.notes || ''}`;
+  }
+  if (e.event_type === 'dado') {
+    return `Dado: ${DICE_MODES[e.notes] || e.notes || ''}`;
   }
   if (e.event_type === 'bonus') {
     const suffix = e.bonus_outcome === 'missed' ? ' · sbagliato' : '';
@@ -822,28 +1109,48 @@ function toggleEventCreate() {
   loadMatchPage();
 }
 
+// Id dei giocatori ESPULSI in questa partita (rosso diretto o doppia ammonizione):
+// non devono comparire negli eventi successivi.
+function expelledPlayerIds() {
+  const ids = new Set();
+  (allEvents || []).forEach(e => {
+    if ((e.event_type === 'red_card' || e.event_type === 'second_yellow') && e.player_id) {
+      ids.add(Number(e.player_id));
+    }
+  });
+  return ids;
+}
+
 function renderPlayerSelects() {
   const teamId = document.getElementById('event-team')?.value;
   if (!teamId) return;
 
-  const players = String(teamId) === String(matchData.home_team_id)
+  const all = String(teamId) === String(matchData.home_team_id)
     ? homePlayers : awayPlayers;
 
+  // Escludo i giocatori già espulsi dalla selezione dei nuovi eventi
+  const expelled = expelledPlayerIds();
+  const players = all.filter(p => !expelled.has(Number(p.id)));
+
+  // Sui gol i presidenti (PRE) non possono essere marcatori
+  const eventType = document.getElementById('event-type')?.value;
+  const scorers = (eventType === 'goal')
+    ? players.filter(p => p.role !== 'PRE')
+    : players;
+
   const playerSelect = document.getElementById('event-player');
-  const assistSelect = document.getElementById('assist-player');
   if (playerSelect) {
-    playerSelect.innerHTML = players.map(p =>
+    const prevP = playerSelect.value;
+    playerSelect.innerHTML = scorers.map(p =>
       `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
     ).join('');
+    if (prevP && scorers.some(p => String(p.id) === String(prevP))) {
+      playerSelect.value = prevP;
+    }
   }
-  if (assistSelect) {
-    assistSelect.innerHTML = `
-      <option value="">Nessun assist</option>
-      ${players.map(p =>
-        `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
-      ).join('')}
-    `;
-  }
+
+  // L'assist esclude i PRE e il marcatore selezionato
+  refreshAssistOptions();
 
   const cardPlayer = document.getElementById('card-player');
   if (cardPlayer) {
@@ -856,13 +1163,46 @@ function renderPlayerSelects() {
   }
 }
 
+// Ricostruisce il select Assist: esclude i presidenti (PRE), gli espulsi e il marcatore scelto
+function refreshAssistOptions() {
+  const assistSelect = document.getElementById('assist-player');
+  if (!assistSelect) return;
+
+  const teamId = document.getElementById('event-team')?.value;
+  const all = String(teamId) === String(matchData.home_team_id)
+    ? homePlayers : awayPlayers;
+
+  const expelled = expelledPlayerIds();
+  const scorerId = document.getElementById('event-player')?.value;
+  const prev = assistSelect.value;
+
+  const list = all.filter(p =>
+    p.role !== 'PRE' &&
+    !expelled.has(Number(p.id)) &&
+    String(p.id) !== String(scorerId));
+
+  assistSelect.innerHTML = `
+    <option value="">Nessun assist</option>
+    ${list.map(p =>
+      `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
+    ).join('')}
+  `;
+
+  // mantengo la selezione precedente se è ancora valida
+  if (prev && list.some(p => String(p.id) === String(prev))) {
+    assistSelect.value = prev;
+  }
+}
+
 function handleEventTypeChange() {
   const type = document.getElementById('event-type')?.value;
   if (!type) return;
 
   const show = (id, on) => {
     const el = document.getElementById(id);
-    if (el) el.style.display = on ? 'flex' : 'none';
+    if (!el) return;
+    el.classList.toggle('hidden', !on);   // .hidden ha display:none !important
+    el.style.display = on ? 'flex' : 'none';
   };
 
   show('goal-type-box', false);
@@ -872,10 +1212,18 @@ function handleEventTypeChange() {
   show('bonus-outcome-box', false);
   show('card-box', false);
   show('card-player-box', false);
+  show('dado-box', false);
 
-  // Il giocatore non serve per le carte (è opzionale, ha il suo select)
+  // Il giocatore non serve per carte e dado (il dado è neutro/informativo)
   const playerBox = document.getElementById('event-player')?.closest('.admin-field');
-  if (playerBox) playerBox.style.display = (type === 'special_card') ? 'none' : 'flex';
+  if (playerBox) playerBox.style.display = (type === 'special_card' || type === 'dado') ? 'none' : 'flex';
+
+  // Il dado vale per entrambe le squadre: nascondo il selettore squadra
+  const teamBox = document.getElementById('event-team')?.closest('.admin-field');
+  if (teamBox) teamBox.style.display = (type === 'dado') ? 'none' : 'flex';
+
+  // Ricostruisco le liste giocatori: sui gol i PRE vanno esclusi dai marcatori/assist
+  renderPlayerSelects();
 
   if (type === 'goal') {
     show('goal-type-box', true);
@@ -890,6 +1238,9 @@ function handleEventTypeChange() {
     show('card-box', true);
     show('card-player-box', true);
   }
+  if (type === 'dado') {
+    show('dado-box', true);
+  }
 }
 
 // L'assist esiste solo per i gol di azione: rigore e punizione non hanno assist
@@ -898,7 +1249,9 @@ function updateAssistVisibility() {
   const goalType = document.getElementById('goal-type')?.value;
   const assistBox = document.getElementById('assist-box');
   if (!assistBox) return;
-  assistBox.style.display = (type === 'goal' && goalType === 'azione') ? 'flex' : 'none';
+  const on = (type === 'goal' && goalType === 'azione');
+  assistBox.classList.toggle('hidden', !on);   // .hidden ha display:none !important
+  assistBox.style.display = on ? 'flex' : 'none';
 }
 
 async function updateSchedule() {
@@ -972,6 +1325,20 @@ async function startSecondHalf() {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) { alert(data.error || 'Errore avvio 2° tempo'); return; }
+  await loadMatchPage();
+}
+
+async function pauseTimer() {
+  const res  = await fetch(`/matches/${matchId}/pause`, { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { alert(data.error || 'Errore messa in pausa'); return; }
+  await loadMatchPage();
+}
+
+async function resumeTimer() {
+  const res  = await fetch(`/matches/${matchId}/resume`, { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { alert(data.error || 'Errore ripresa'); return; }
   await loadMatchPage();
 }
 
@@ -1066,6 +1433,10 @@ async function createMatchEvent() {
     const cardPlayer = document.getElementById('card-player').value;
     body.player_id = cardPlayer ? Number(cardPlayer) : null;
     body.notes     = document.getElementById('card-type-select').value;
+  } else if (event_type === 'dado') {
+    // Dado: evento neutro/informativo, nessun giocatore, esito in notes
+    body.player_id = null;
+    body.notes     = document.getElementById('dado-mode').value;
   } else {
     const player_id = document.getElementById('event-player').value;
     body.player_id  = player_id ? Number(player_id) : null;
@@ -1077,6 +1448,10 @@ async function createMatchEvent() {
     if (body.goal_type === 'azione') {
       const assist = document.getElementById('assist-player').value;
       body.assist_player_id = assist ? Number(assist) : null;
+      if (body.assist_player_id && body.assist_player_id === body.player_id) {
+        alert('Il marcatore e l\u2019assist non possono essere lo stesso giocatore.');
+        return;
+      }
     } else {
       body.assist_player_id = null;   // rigore/punizione: nessun assist
     }
@@ -1151,8 +1526,10 @@ function renderEditEventBox() {
           <select id="edit-event-type" onchange="handleEditTypeChange()">
             <option value="goal"        ${sel(e.event_type,'goal')}>Gol</option>
             <option value="yellow_card" ${sel(e.event_type,'yellow_card')}>Cartellino Giallo</option>
+            <option value="second_yellow" ${sel(e.event_type,'second_yellow')}>Doppia ammonizione (espulsione)</option>
             <option value="red_card"    ${sel(e.event_type,'red_card')}>Cartellino Rosso</option>
             <option value="bonus"       ${sel(e.event_type,'bonus')}>Bonus</option>
+            <option value="dado"        ${sel(e.event_type,'dado')}>Dado</option>
           </select>
         </div>
 
@@ -1166,7 +1543,7 @@ function renderEditEventBox() {
 
         <div class="admin-field">
           <label>Giocatore</label>
-          <select id="edit-event-player"></select>
+          <select id="edit-event-player" onchange="refreshEditAssistOptions()"></select>
         </div>
 
         <div class="admin-field" id="edit-goal-type-box">
@@ -1175,6 +1552,7 @@ function renderEditEventBox() {
             <option value="azione"    ${sel(e.goal_type,'azione')}>Azione</option>
             <option value="rigore"    ${sel(e.goal_type,'rigore')}>Rigore</option>
             <option value="punizione" ${sel(e.goal_type,'punizione')}>Punizione</option>
+            <option value="shootout"  ${sel(e.goal_type,'shootout')}>Shootout</option>
             <option value="rigore_presidenziale" ${sel(e.goal_type,'rigore_presidenziale')}>Rigore Presidenziale</option>
           </select>
         </div>
@@ -1210,6 +1588,13 @@ function renderEditEventBox() {
           </select>
         </div>
 
+        <div class="admin-field" id="edit-dado-box">
+          <label>Esito dado</label>
+          <select id="edit-dado-mode">
+            ${Object.entries(DICE_MODES).map(([id, name]) => `<option value="${id}" ${sel(e.notes, id)}>${name}</option>`).join('')}
+          </select>
+        </div>
+
         <div class="admin-field minute-field">
           <label><i class="fa-solid fa-clock"></i> Minuto</label>
           <div class="minute-row">
@@ -1238,27 +1623,67 @@ function renderEditPlayerSelects() {
   const assistSelect = document.getElementById('edit-assist-player');
   if (!playerSelect || !assistSelect) return;
 
-  playerSelect.innerHTML = players.map(p =>
+  // Sui gol i presidenti (PRE) non possono essere marcatori
+  const eventType = document.getElementById('edit-event-type')?.value;
+  const scorers = (eventType === 'goal')
+    ? players.filter(p => p.role !== 'PRE')
+    : players;
+
+  const prevP = playerSelect.value;
+  playerSelect.innerHTML = scorers.map(p =>
     `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
   ).join('');
+  if (prevP && scorers.some(p => String(p.id) === String(prevP))) {
+    playerSelect.value = prevP;
+  }
+
+  refreshEditAssistOptions();
+}
+
+// Ricostruisce l'Assist in modifica: esclude i PRE e il marcatore selezionato
+function refreshEditAssistOptions() {
+  const assistSelect = document.getElementById('edit-assist-player');
+  if (!assistSelect) return;
+
+  const teamId = document.getElementById('edit-event-team')?.value;
+  const players = String(teamId) === String(matchData.home_team_id)
+    ? homePlayers : awayPlayers;
+
+  const scorerId = document.getElementById('edit-event-player')?.value;
+  const prev = assistSelect.value;
+
+  const list = players.filter(p =>
+    p.role !== 'PRE' && String(p.id) !== String(scorerId));
 
   assistSelect.innerHTML = `
     <option value="">Nessun assist</option>
-    ${players.map(p =>
+    ${list.map(p =>
       `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
     ).join('')}
   `;
+
+  if (prev && list.some(p => String(p.id) === String(prev))) {
+    assistSelect.value = prev;
+  }
 }
 
 function handleEditTypeChange() {
   const type = document.getElementById('edit-event-type')?.value;
   if (!type) return;
 
+  // Ricostruisco le liste: sui gol i PRE vanno esclusi (preservando le scelte valide)
+  renderEditPlayerSelects();
+
   document.getElementById('edit-goal-type-box').style.display     = 'none';
   document.getElementById('edit-goal-value-box').style.display    = 'none';
   document.getElementById('edit-assist-box').style.display        = 'none';
   document.getElementById('edit-bonus-box').style.display         = 'none';
   document.getElementById('edit-bonus-outcome-box').style.display = 'none';
+  document.getElementById('edit-dado-box').style.display          = 'none';
+
+  // Il giocatore non serve per il dado (evento neutro)
+  const editPlayerBox = document.getElementById('edit-event-player')?.closest('.admin-field');
+  if (editPlayerBox) editPlayerBox.style.display = (type === 'dado') ? 'none' : 'flex';
 
   if (type === 'goal') {
     document.getElementById('edit-goal-type-box').style.display  = 'flex';
@@ -1268,6 +1693,9 @@ function handleEditTypeChange() {
   if (type === 'bonus') {
     document.getElementById('edit-bonus-box').style.display         = 'flex';
     document.getElementById('edit-bonus-outcome-box').style.display = 'flex';
+  }
+  if (type === 'dado') {
+    document.getElementById('edit-dado-box').style.display = 'flex';
   }
 }
 
@@ -1310,18 +1738,27 @@ async function submitEditEvent() {
     minute
   };
 
+  if (event_type === 'dado') {
+    body.player_id = null;
+    body.notes     = document.getElementById('edit-dado-mode').value;
+  }
+
   if (event_type === 'goal') {
     body.goal_type   = document.getElementById('edit-goal-type').value;
     body.event_value = Number(document.getElementById('edit-goal-value').value) || 1;
     if (body.goal_type === 'azione') {
       const assist = document.getElementById('edit-assist-player').value;
       body.assist_player_id = assist ? Number(assist) : null;
+      if (body.assist_player_id && body.assist_player_id === body.player_id) {
+        alert('Il marcatore e l\u2019assist non possono essere lo stesso giocatore.');
+        return;
+      }
     } else {
       body.assist_player_id = null;   // rigore/punizione: nessun assist
     }
   }
 
-  if (event_type === 'yellow_card' || event_type === 'red_card') {
+  if (event_type === 'yellow_card' || event_type === 'red_card' || event_type === 'second_yellow') {
     body.card_type = event_type;
   }
 
@@ -1346,6 +1783,34 @@ async function submitEditEvent() {
   await loadMatchPage();
 }
 
+function updateDiceBlink() {
+  const endBtn = document.getElementById('btn-end-first-half');
+  if (!endBtn || !matchData) return;
+  const { half } = currentHalfMs();
+  // 1° tempo: dado scaduto = giocati ≥ 8' regolamentari + 2' di dado
+  const diceExpired = matchData.phase === 'first_half' && half >= (HALF_MS + DICE_MS);
+  endBtn.classList.toggle('blink', diceExpired);
+}
+
+// Allo scadere degli 8' del 1° tempo mette in pausa AUTOMATICAMENTE (una volta sola).
+// Si attiva solo per l'admin (la pausa richiede autenticazione) e se non è già
+// stata usata la pausa in questo tempo (paused_ms === 0 e non già in pausa).
+async function maybeAutoPause() {
+  if (!logged || autoPauseInFlight || !matchData) return;
+  if (matchData.status !== 'live' || matchData.phase !== 'first_half') return;
+  if (isPaused() || pausedMsValue() > 0) return;
+
+  const { half } = currentHalfMs();
+  if (half >= HALF_MS) {
+    autoPauseInFlight = true;
+    try {
+      await pauseTimer();   // pausa lato server + ricarica pagina
+    } finally {
+      autoPauseInFlight = false;
+    }
+  }
+}
+
 function startTimer() {
   if (timerInterval) clearInterval(timerInterval);
 
@@ -1354,8 +1819,12 @@ function startTimer() {
     const minuteInput = document.getElementById('event-minute');
     if (el)          el.innerHTML      = renderClockHtml();
     if (minuteInput) minuteInput.value = getCurrentMinute();
+    updateDiceBlink();
+    maybeAutoPause();
   }, 1000);
 
+  updateDiceBlink();
+  maybeAutoPause();
   renderPlayerSelects();
   handleEventTypeChange();
 }
@@ -1366,6 +1835,19 @@ function parseDate(v) {
 
 function parseStartedAt() {
   return parseDate(matchData.started_at);
+}
+
+// ── Pausa cronometro ───────────────────────────────────────────────────────
+function isPaused() {
+  return !!(matchData && matchData.paused_at);
+}
+// Tempo di pausa accumulato nel tempo corrente (ms); azzerato a inizio di ogni tempo
+function pausedMsValue() {
+  return Number((matchData && matchData.paused_ms) || 0);
+}
+// "Adesso" effettivo: se in pausa, è congelato all'istante di pausa
+function effNow() {
+  return isPaused() ? parseDate(matchData.paused_at) : new Date();
 }
 
 /*
@@ -1379,29 +1861,34 @@ function getElapsedMs() {
   const start = parseStartedAt();
   if (!start) return 0;
 
-  const now         = new Date();
+  const now         = effNow();
   const phase       = matchData.phase;
   const firstEnd    = parseDate(matchData.first_half_ended_at);
   const secondStart = parseDate(matchData.second_half_started_at);
   const ended       = parseDate(matchData.ended_at);
   const firstHalfMs = firstEnd ? (firstEnd - start) : 0;
+  const paused      = pausedMsValue();
 
-  if (phase === 'first_half')  return now - start;
+  if (phase === 'first_half')  return Math.max(0, (now - start) - paused);
   if (phase === 'halftime')    return firstHalfMs;
-  if (phase === 'second_half') return firstHalfMs + (secondStart ? (now - secondStart) : 0);
+  if (phase === 'second_half') return firstHalfMs + Math.max(0, (secondStart ? (now - secondStart) : 0) - paused);
 
   if (phase === 'shootout' || matchData.status === 'finished') {
     const ref = ended || now;
     return firstHalfMs + (secondStart ? (ref - secondStart) : 0);
   }
 
-  return now - start;
+  return Math.max(0, (now - start) - paused);
 }
 
 function getCurrentMinute() {
   const start = parseStartedAt();
   if (!start) return 0;
-  return Math.max(1, Math.floor(getElapsedMs() / 60000) + 1);
+  // Uso il cronometro EFFETTIVO mostrato a video (base pulita 8:00 a tempo +
+  // tempo del tempo corrente al netto delle pause), così il minuto dell'evento
+  // coincide con il display e non conteggia il tempo reale dallo start.
+  const { base, half } = currentHalfMs();
+  return Math.max(1, Math.floor((base + half) / 60000) + 1);
 }
 
 function getTimerText() {
@@ -1423,15 +1910,16 @@ function currentHalfMs() {
   const start = parseStartedAt();
   if (!start) return { base: 0, half: 0 };
 
-  const now   = new Date();
-  const phase = matchData.phase;
+  const now    = effNow();
+  const phase  = matchData.phase;
+  const paused = pausedMsValue();
 
   if (phase === 'first_half') {
-    return { base: 0, half: Math.max(0, now - start) };
+    return { base: 0, half: Math.max(0, (now - start) - paused) };
   }
   if (phase === 'second_half') {
     const secondStart = parseDate(matchData.second_half_started_at);
-    return { base: HALF_MS, half: Math.max(0, secondStart ? (now - secondStart) : 0) };
+    return { base: HALF_MS, half: Math.max(0, secondStart ? ((now - secondStart) - paused) : 0) };
   }
   // fasi non in gioco: fallback al tempo totale
   return { base: 0, half: Math.max(0, getElapsedMs()) };
@@ -1447,8 +1935,12 @@ function renderClockHtml() {
 
   if (recupero > 0) {
     const rs  = Math.floor(recupero / 1000);
-    const rec = `${Math.floor(rs / 60)}:${String(rs % 60).padStart(2, '0')}`;
-    return `${main} <span class="recupero-badge" title="Recupero">+${rec}</span>`;
+    const rec = `${String(Math.floor(rs / 60)).padStart(2, '0')}:${String(rs % 60).padStart(2, '0')}`;
+    // Nel 1° tempo i primi 2' oltre il regolamentare sono il dado Wildcard
+    if (matchData && matchData.phase === 'first_half' && recupero <= DICE_MS) {
+      return `${main} <span class="dado-badge" title="Dado Wildcard">🎲 ${rec}</span>`;
+    }
+    return `${main} <span class="recupero-badge" title="Recupero / extra">+ ${rec}</span>`;
   }
   return main;
 }

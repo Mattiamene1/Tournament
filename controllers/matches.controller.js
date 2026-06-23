@@ -130,6 +130,28 @@ async function startSecondHalf(req, res) {
   }
 }
 
+async function pauseTimer(req, res) {
+  try {
+    await Match.pauseTimer(req.params.id);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({ success: true, match: updatedMatch });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function resumeTimer(req, res) {
+  try {
+    await Match.resumeTimer(req.params.id);
+    const updatedMatch = await Match.getMatchById(req.params.id);
+    res.json({ success: true, match: updatedMatch });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 async function updateShootoutScore(req, res) {
   try {
     const { side, delta } = req.body;
@@ -278,6 +300,8 @@ module.exports = {
   resolveExtraTime,
   endFirstHalf,
   startSecondHalf,
+  pauseTimer,
+  resumeTimer,
   updateShootoutScore,
   finishShootout,
   addShootoutKick,

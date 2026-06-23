@@ -301,6 +301,31 @@ async function countGoalType(matchId, teamId, goalType, excludeId = null) {
   return Number(rows[0].c || 0);
 }
 
+/* =========================
+   CARTELLINI DI UN GIOCATORE IN UNA PARTITA
+   (giallo / rosso / doppia ammonizione)
+   Usato per: doppio giallo = espulsione e blocco cartellini
+   su giocatore già espulso.
+========================= */
+async function getPlayerCards(matchId, playerId, excludeId = null) {
+  let sql = `
+    SELECT id, event_type, card_type
+      FROM match_events
+     WHERE match_id = ?
+       AND player_id = ?
+       AND event_type IN ('yellow_card', 'red_card', 'second_yellow')
+  `;
+  const params = [matchId, playerId];
+
+  if (excludeId) {
+    sql += ' AND id <> ?';
+    params.push(excludeId);
+  }
+
+  const [rows] = await db.execute(sql, params);
+  return rows;
+}
+
 /* Conta gli eventi di un certo event_type per una squadra in una partita */
 async function countEventType(matchId, teamId, eventType, excludeId = null) {
   let sql = `
@@ -330,5 +355,6 @@ module.exports = {
   updateMatchScoreAfterGoal,
   updateMatchScore,
   countGoalType,
-  countEventType
+  countEventType,
+  getPlayerCards
 };

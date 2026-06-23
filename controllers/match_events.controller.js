@@ -1,5 +1,7 @@
 const MatchEvent = require('../models/match_events.model');
 const Bonus = require('../models/bonuses.model');
+const Player = require('../models/players.model');
+const Match = require('../models/matches.model');
 
 /*
   Normalizza un evento bonus in base all'esito scelto:
@@ -22,6 +24,75 @@ async function applyBonusOutcome(data) {
   data.event_value = (outcome === 'scored') ? Number(bonus.goal_value || 0) : 0;
 }
 
+/*
+  Validazioni di dominio per gol e cartellini.
+  Ritorna una stringa d'errore se l'evento NON è valido, altrimenti null.
+  Può MUTARE `data` (il 2° giallo diventa una doppia ammonizione/espulsione).
+  `excludeId` serve in update per ignorare l'evento che si sta modificando.
+*/
+async function validateEventRules(data, excludeId = null) {
+  // ── GOL ─────────────────────────────────────────────────────────────
+  if (data.event_type === 'goal') {
+    // marcatore e assist non possono essere lo stesso giocatore
+    if (data.assist_player_id &&
+        Number(data.assist_player_id) === Number(data.player_id)) {
+      return 'Il marcatore e l\u2019assist non possono essere lo stesso giocatore.';
+    }
+    // un presidente (PRE) non può segnare
+    if (data.player_id) {
+      const scorer = await Player.getPlayerById(data.player_id);
+      if (scorer && scorer.role === 'PRE') {
+        return 'Un presidente (PRE) non può segnare un gol.';
+      }
+    }
+    // …né fare assist
+    if (data.assist_player_id) {
+      const assistant = await Player.getPlayerById(data.assist_player_id);
+      if (assistant && assistant.role === 'PRE') {
+        return 'Un presidente (PRE) non può fare un assist.';
+      }
+    }
+
+    // un giocatore espulso non può partecipare a eventi successivi
+    if (data.player_id) {
+      const cards = await MatchEvent.getPlayerCards(data.match_id, data.player_id, excludeId);
+      if (cards.some(c => c.event_type === 'red_card' || c.event_type === 'second_yellow')) {
+        return 'Giocatore espulso: non può segnare.';
+      }
+    }
+    if (data.assist_player_id) {
+      const cards = await MatchEvent.getPlayerCards(data.match_id, data.assist_player_id, excludeId);
+      if (cards.some(c => c.event_type === 'red_card' || c.event_type === 'second_yellow')) {
+        return 'Giocatore espulso: non può fare assist.';
+      }
+    }
+  }
+
+  // ── CARTELLINI ──────────────────────────────────────────────────────
+  if ((data.event_type === 'yellow_card' || data.event_type === 'red_card') &&
+      data.player_id) {
+    const cards = await MatchEvent.getPlayerCards(data.match_id, data.player_id, excludeId);
+
+    // giocatore già espulso (rosso diretto o doppia ammonizione): stop
+    const alreadyExpelled = cards.some(c =>
+      c.event_type === 'red_card' || c.event_type === 'second_yellow');
+    if (alreadyExpelled) {
+      return 'Giocatore già espulso: non è possibile registrare altri cartellini.';
+    }
+
+    // doppio giallo = espulsione: il 2° giallo diventa "doppia ammonizione"
+    if (data.event_type === 'yellow_card') {
+      const yellows = cards.filter(c => c.event_type === 'yellow_card').length;
+      if (yellows >= 1) {
+        data.event_type = 'second_yellow';
+        data.card_type  = 'second_yellow';
+      }
+    }
+  }
+
+  return null;
+}
+
 /* CREATE */
 async function createMatchEvent(req, res) {
   try {
@@ -33,6 +104,24 @@ async function createMatchEvent(req, res) {
 
     // Imposta bonus_outcome / event_value per i bonus
     await applyBonusOutcome(data);
+
+    // Regole di dominio (gol presidente/assist uguale, doppio giallo, ecc.)
+    const ruleError = await validateEventRules(data);
+    if (ruleError) {
+      return res.status(400).json({ error: ruleError });
+    }
+
+    // Evento Dado: neutro e informativo → registrato per ENTRAMBE le squadre
+    if (data.event_type === 'dado') {
+      const match = await Match.getMatchById(data.match_id);
+      if (!match) {
+        return res.status(404).json({ error: 'Partita non trovata' });
+      }
+      for (const tid of [match.home_team_id, match.away_team_id]) {
+        await MatchEvent.createMatchEvent({ ...data, team_id: tid, player_id: null });
+      }
+      return res.json({ success: true });
+    }
 
     // Regola: ogni squadra ha UN solo Rigore Presidenziale
     if (data.event_type === 'goal' && data.goal_type === 'rigore_presidenziale') {
@@ -118,6 +207,14 @@ function scoreDeltaForEvent(event) {
 /* UPDATE */
 async function updateMatchEvent(req, res) {
   try {
+    // 0) normalizzo l'esito bonus e valido le regole PRIMA di toccare il punteggio
+    await applyBonusOutcome(req.body);
+
+    const ruleError = await validateEventRules(req.body, req.params.id);
+    if (ruleError) {
+      return res.status(400).json({ error: ruleError });
+    }
+
     // 1) annullo l'effetto del vecchio evento sul punteggio
     const oldEvent = await MatchEvent.getMatchEventById(req.params.id);
     if (oldEvent) {
@@ -127,8 +224,7 @@ async function updateMatchEvent(req, res) {
       }
     }
 
-    // 2) applico la modifica (normalizzando prima l'esito bonus)
-    await applyBonusOutcome(req.body);
+    // 2) applico la modifica
 
     // Regola: un solo Rigore Presidenziale per squadra (escludo l'evento corrente)
     if (req.body.event_type === 'goal' && req.body.goal_type === 'rigore_presidenziale') {

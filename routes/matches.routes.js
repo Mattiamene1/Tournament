@@ -36,6 +36,8 @@ router.delete('/:id', isAuthenticated, controller.deleteMatch);
 router.post('/:id/start', isAuthenticated, controller.startMatch);
 router.post('/:id/end-first-half', isAuthenticated, controller.endFirstHalf);
 router.post('/:id/start-second-half', isAuthenticated, controller.startSecondHalf);
+router.post('/:id/pause', isAuthenticated, controller.pauseTimer);
+router.post('/:id/resume', isAuthenticated, controller.resumeTimer);
 router.post('/:id/finish', isAuthenticated, controller.finishMatch);
 router.post('/:id/resolve-extratime', isAuthenticated, controller.resolveExtraTime);
 
