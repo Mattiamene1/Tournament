@@ -90,8 +90,11 @@
       const res = await fetch(`/players/${playerId}`);
       const p = await res.json();
 
-      const teamRes = await fetch(`/teams/${p.team_id}`);
-      const team = await teamRes.json();
+      let team = null;
+      if (p.team_id) {
+        const teamRes = await fetch(`/teams/${p.team_id}`);
+        if (teamRes.ok) team = await teamRes.json();
+      }
 
       const eventsRes = await fetch('/match-events');
       const events = await eventsRes.json();
@@ -115,11 +118,17 @@
             <h1>${p.first_name} ${p.last_name}</h1>
 
             <div class="player-meta">
-              <div class="team-box team-link" onclick="goToTeam(${team.id})" title="Vai alla squadra">
+              ${
+                team
+                  ? `<div class="team-box team-link" onclick="goToTeam(${team.id})" title="Vai alla squadra">
                 <img src="/assets/storage/teams/${team.name.toLowerCase().replace(/\s+/g,'_')}_logo.png"
                     alt="${team.name}">
                 <span>${team.name}</span>
-              </div>
+              </div>`
+                  : `<div class="team-box">
+                <span>Nessuna squadra</span>
+              </div>`
+              }
 
               <div class="player-info">
                 <p>
