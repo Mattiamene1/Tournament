@@ -1887,7 +1887,7 @@ body, body.bg-slate-50 {
 
 /* Non-admin: 3 data cols + action */
 #players-container.guest-mode .player {
-  grid-template-columns: 40% 25% 30% 5%;
+  grid-template-columns: 40% 20% 35% 5%;
 }
 
 @media (max-width: 768px) {
