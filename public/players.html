@@ -408,16 +408,17 @@
     });
 
     /* Shirt: required unless PRE */
-    const role  = document.getElementById(`ep-role-${id}`);
-    const shirt = document.getElementById(`ep-shirt_number-${id}`);
-    const sErr  = document.getElementById(`ep-err-shirt_number-${id}`);
-    if (role && shirt && role.value !== 'PRE') {
-      const v  = Number(shirt.value);
-      const ok = shirt.value !== '' && Number.isInteger(v) && v >= 1 && v <= 99;
-      shirt.classList.toggle('invalid', !ok);
-      sErr.classList.toggle('visible', !ok);
-      if (!ok) valid = false;
-    }
+    //const role  = document.getElementById(`ep-role-${id}`);
+    //const shirt = document.getElementById(`ep-shirt_number-${id}`);
+    //const sErr  = document.getElementById(`ep-err-shirt_number-${id}`);
+    //if (role && shirt && role.value !== 'PRE') {
+      //const v  = Number(shirt.value);
+      //const ok = shirt.value !== '' && Number.isInteger(v) && v >= 1 && v <= 99;
+      //shirt.classList.toggle('invalid', !ok);
+      //sErr.classList.toggle('visible', !ok);
+      //if (!ok) valid = false;
+    //}
+    
 
     return valid;
   }
