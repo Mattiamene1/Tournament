@@ -102,6 +102,11 @@ async function updatePlayer(id, data) {
     params.push(Number(data.shirt_number || 0));
   }
 
+  if (data.team_id !== undefined) {
+    fields.push('team_id = ?');
+    params.push(data.team_id);
+  }
+
   if (!fields.length) {
     throw new Error('Nessun campo da aggiornare');
   }

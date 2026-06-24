@@ -783,7 +783,7 @@ h3 {
 }
 
 .match-status.live { color: #ef4444; animation: blink 1s infinite; }
-.match-status.scheduled { color: #d97706; }
+.match-status.scheduled { color: #156ed4; }
 .match-status.finished { color: #16a34a; }
 
 @keyframes blink { 50% { opacity: 0.4; } }

@@ -327,9 +327,9 @@
 
             <div class="edit-field field-shirt-wrap" id="ep-shirt-wrap-${player.id}">
               <label>N° maglia <span style="color:#e05252">*</span></label>
-              <input id="ep-shirt_number-${player.id}" type="number" min="1" max="99"
-                     value="${player.shirt_number || ''}" placeholder="1–99">
-              <span class="field-error" id="ep-err-shirt_number-${player.id}">Numero non valido (1–99)</span>
+              <input id="ep-shirt_number-${player.id}" type="number" min="0" max="99"
+                     value="${player.shirt_number ?? ''}" placeholder="0–99">
+              <span class="field-error" id="ep-err-shirt_number-${player.id}">Numero non valido (0–99)</span>
             </div>
 
             <div class="edit-field">
@@ -411,9 +411,9 @@
     const role  = document.getElementById(`ep-role-${id}`);
     const shirt = document.getElementById(`ep-shirt_number-${id}`);
     const sErr  = document.getElementById(`ep-err-shirt_number-${id}`);
-    if (role && shirt && role.value !== 'PRE') {
+    if (role && shirt && role.value !== 'PRE' && shirt.value !== '') {
       const v  = Number(shirt.value);
-      const ok = shirt.value !== '' && Number.isInteger(v) && v >= 1 && v <= 99;
+      const ok = Number.isInteger(v) && v >= 0 && v <= 99;
       shirt.classList.toggle('invalid', !ok);
       sErr.classList.toggle('visible', !ok);
       if (!ok) valid = false;
@@ -445,15 +445,23 @@
 
     const role = document.getElementById(`ep-role-${id}`).value;
 
+    const teamSelect = document.getElementById(`ep-team-${id}`);
+    console.log(`[save] player ${id} → team select value="${teamSelect.value}"`,
+                'selected option text:', teamSelect.options[teamSelect.selectedIndex]?.text);
+
     const body = {
       first_name:   document.getElementById(`ep-first_name-${id}`).value.trim(),
       last_name:    document.getElementById(`ep-last_name-${id}`).value.trim(),
       role,
       team_id:      document.getElementById(`ep-team-${id}`).value || null,
       shirt_number: role !== 'PRE'
-                      ? (document.getElementById(`ep-shirt_number-${id}`).value || null)
+                      ? (document.getElementById(`ep-shirt_number-${id}`).value !== ''
+                          ? Number(document.getElementById(`ep-shirt_number-${id}`).value)
+                          : 0)
                       : null
     };
+
+    console.log(`[save] PUT /players/${id} body:`, JSON.stringify(body));
 
     try {
       const res = await fetch(`/players/${id}`, {
@@ -462,9 +470,13 @@
         body:    JSON.stringify(body)
       });
 
+      console.log(`[save] response status: ${res.status} ${res.statusText}`);
+
+      const data = await res.json().catch(() => ({}));
+      console.log('[save] response body:', data);
+
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Errore salvataggio');
+        throw new Error(data.error || 'Errore salvataggio');
       }
 
       feedback.textContent = '✓ Salvato';
@@ -472,9 +484,13 @@
 
       setTimeout(async () => {
         await loadPage();          /* re-render the list with updated data */
+        const updated = players.find(p => p.id === id);
+        console.log(`[save] after reload player ${id}:`,
+                    'team_id =', updated?.team_id, '| team_name =', updated?.team_name);
       }, 700);
 
     } catch (err) {
+      console.error('[save] error:', err);
       feedback.textContent = `✗ ${err.message}`;
       feedback.className   = 'panel-feedback error';
       saveBtn.disabled = false;

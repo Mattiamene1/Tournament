@@ -99,13 +99,14 @@ async function getPlayerById(req, res) {
 async function updatePlayer(req, res) {
   try {
     const { id } = req.params;
-    const { first_name, last_name, role, shirt_number } = req.body;
+    const { first_name, last_name, role, shirt_number, team_id } = req.body;
 
     const data = {};
     if (first_name   !== undefined) data.first_name   = first_name;
     if (last_name    !== undefined) data.last_name    = last_name;
     if (role         !== undefined) data.role         = role;
     if (shirt_number !== undefined) data.shirt_number = Number(shirt_number || 0);
+    if (team_id      !== undefined) data.team_id      = team_id === null || team_id === '' ? null : Number(team_id);
 
     await Player.updatePlayer(id, data);
     res.json({ success: true, message: 'Player aggiornato' });

@@ -54,8 +54,6 @@
 </div>
 
 <script>
-let matchesTimerInterval = null;
-
 async function loadMatches() {
   try {
     const res = await fetch('/matches');
@@ -64,8 +62,12 @@ async function loadMatches() {
     const container = document.getElementById('matches-container');
     container.innerHTML = '';
 
+    if (!matches.length) {
+      container.innerHTML = '<p>Nessuna partita disponibile.</p>';
+      return;
+    }
+
     matches.forEach(matchData => {
-      startMatchesTimers();
       container.innerHTML += `
         <div class="match-card clickable" onclick="goToMatch(${matchData.id})">
 
@@ -95,10 +97,6 @@ async function loadMatches() {
 
           <div class="match-status ${statusClass(matchData)}">
             ${renderStatus(matchData)}
-            ${isRunning(matchData)
-              ? `<span class="live-timer-inline">⏱ <span class="match-list-timer" data-started-at="${matchData.started_at}">00:00</span></span>`
-              : ''
-            }
           </div>
 
         </div>
@@ -156,11 +154,6 @@ function statusClass(match) {
   return match.status;
 }
 
-function isRunning(match) {
-  return match.status === 'live' &&
-         (match.phase === 'first_half' || match.phase === 'second_half');
-}
-
 function renderStatus(match) {
   const status = match.status;
   const phase  = match.phase;
@@ -181,32 +174,6 @@ function renderStatus(match) {
     case 'finished':  return hadShootout(match) ? '✅ Terminata (dopo shotout)' : '✅ Terminata';
     default:          return status;
   }
-}
-
-function startMatchesTimers() {
-  if (matchesTimerInterval) clearInterval(matchesTimerInterval);
-
-  updateMatchesTimers();
-  matchesTimerInterval = setInterval(updateMatchesTimers, 1000);
-}
-
-function updateMatchesTimers() {
-  document.querySelectorAll('.match-list-timer').forEach(el => {
-    el.textContent = getTimerText(el.dataset.startedAt);
-  });
-}
-
-function getTimerText(startedAtValue) {
-  if (!startedAtValue) return '00:00';
-
-  const startedAt = new Date(startedAtValue);
-  const now = new Date();
-  const diff = Math.max(0, Math.floor((now - startedAt) / 1000));
-
-  const minutes = String(Math.floor(diff / 60)).padStart(2, '0');
-  const seconds = String(diff % 60).padStart(2, '0');
-
-  return `${minutes}:${seconds}`;
 }
 
 loadMatches();
