@@ -235,6 +235,18 @@
       font-weight: 600;
       font-size: .95rem;
     }
+    .mvp-banner .mvp-remove {
+      margin-left: 8px;
+      border: none;
+      background: transparent;
+      color: #b45309;
+      cursor: pointer;
+      font-size: .9rem;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 6px;
+    }
+    .mvp-banner .mvp-remove:hover { background: rgba(180,83,9,.15); }
   </style>
 </head>
 
@@ -570,10 +582,15 @@ function renderMvpBanner() {
   const name = mvp.player_name || formatEventPlayerName(mvp) || 'Giocatore';
   const num  = mvp.shirt_number ? `#${mvp.shirt_number} ` : '';
   const team = mvp.team_name ? ` · ${formatTeamName(mvp.team_name)}` : '';
-  const clickable = mvp.player_id ? `onclick="goToPlayer(${mvp.player_id})" style="cursor:pointer;"` : '';
+  const nameHtml = mvp.player_id
+    ? `<span class="event-player-link" onclick="goToPlayer(${mvp.player_id})">${num}${name}</span>`
+    : `${num}${name}`;
+  const remove = logged
+    ? `<button class="mvp-remove" title="Rimuovi MVP" onclick="deleteEvent(${mvp.id})">✕</button>`
+    : '';
   return `
-    <div class="mvp-banner" ${clickable} title="Miglior giocatore della partita">
-      👑 <strong>MVP</strong> — ${num}${name}${team}
+    <div class="mvp-banner" title="Miglior giocatore della partita">
+      👑 <strong>MVP</strong> — ${nameHtml}${team}${remove}
     </div>`;
 }
 
@@ -1004,7 +1021,7 @@ function renderEventRow(e) {
       <div class="tl-home">${isHome ? card : ''}</div>
       <div class="tl-center">
         <div class="tl-icon">${eventIcon(e.event_type)}</div>
-        <div class="tl-minute">${e.minute}'</div>
+        <div class="tl-minute">${e.minute != null ? e.minute + "'" : ''}</div>
       </div>
       <div class="tl-away">${!isHome ? card : ''}</div>
     </div>
@@ -1019,7 +1036,7 @@ function renderDadoComboRow(homeEvt, awayEvt) {
       <div class="tl-home">${homeEvt ? eventCardHtml(homeEvt) : ''}</div>
       <div class="tl-center">
         <div class="tl-icon">🎲</div>
-        <div class="tl-minute">${minute}'</div>
+        <div class="tl-minute">${minute != null ? minute + "'" : ''}</div>
       </div>
       <div class="tl-away">${awayEvt ? eventCardHtml(awayEvt) : ''}</div>
     </div>
@@ -1031,6 +1048,7 @@ function renderEvents(events) {
   // e la riga dell'ESITO dado quando è "3 shootout"/"3 rigori"
   // (in quei casi si stampano invece i singoli tiri del dado).
   events = (events || []).filter(e =>
+    e.event_type !== 'mvp' &&
     !(e.goal_type === 'shootout' && e.minute == null) &&
     !(e.event_type === 'dado' && (e.notes === '3_shootout' || e.notes === '3_rigori'))
   );
@@ -1544,8 +1562,9 @@ async function finishShootout() {
 async function createMatchEvent() {
   const event_type = document.getElementById('event-type').value;
   const team_id    = document.getElementById('event-team').value;
-  // Se non c'è un cronometro attivo (es. MVP a partita finita) uso un minuto simbolico
-  const minute     = getCurrentMinute() || 90;
+  // L'MVP è un evento neutro senza minuto (come da inserimento manuale).
+  // Per gli altri eventi uso il cronometro (o un minuto simbolico se assente).
+  const minute     = event_type === 'mvp' ? null : (getCurrentMinute() || 90);
 
   const body = {
     match_id:  Number(matchId),

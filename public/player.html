@@ -99,10 +99,12 @@
       const eventsRes = await fetch('/match-events');
       const events = await eventsRes.json();
 
-      const goals = events.filter(e =>
-        String(e.player_id) === String(playerId) &&
-        (e.event_type === 'goal' || (e.event_type === 'bonus' && Number(e.event_value) > 0))
-      ).length;
+      const goals = events
+        .filter(e =>
+          String(e.player_id) === String(playerId) &&
+          (e.event_type === 'goal' || (e.event_type === 'bonus' && Number(e.event_value) > 0))
+        )
+        .reduce((sum, e) => sum + (e.event_type === 'goal' ? (Number(e.event_value) || 1) : (Number(e.event_value) || 0)), 0);
 
       const assists = events.filter(e =>
         String(e.assist_player_id) === String(playerId)

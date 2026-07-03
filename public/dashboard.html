@@ -320,7 +320,7 @@
 /* ============================================================
    CONFIG
 ============================================================ */
-const REFRESH_MS   = 20000;   // auto-refresh dati ogni 20s
+const REFRESH_MS   = 30000;   // auto-refresh dati ogni 30s
 const HALF_MS      = 8 * 60000;   // un tempo = 8'
 const DICE_MS      = 2 * 60000;   // dado Wildcard (extra 1° tempo)
 const QUALIFY_TOP  = 2;           // squadre evidenziate per girone (passano il turno)
@@ -560,7 +560,7 @@ function renderScorers(){
   const map={};
   events.forEach(e=>{
     if((e.event_type==='goal'||(e.event_type==='bonus'&&Number(e.event_value)>0)) && e.player_id){
-      (map[e.player_id] ||= {goals:0,assists:0}).goals++;
+      (map[e.player_id] ||= {goals:0,assists:0}).goals += (e.event_type==='goal' ? (Number(e.event_value)||1) : (Number(e.event_value)||0));
     }
   });
   events.forEach(e=>{

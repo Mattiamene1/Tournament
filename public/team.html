@@ -385,7 +385,7 @@
             .filter(e => e.event_type === 'goal' || (e.event_type === 'bonus' && Number(e.event_value) > 0))
             .forEach(e => {
                 if (!e.player_id) return;
-                scorerMap[e.player_id] = (scorerMap[e.player_id] || 0) + 1;
+                scorerMap[e.player_id] = (scorerMap[e.player_id] || 0) + (e.event_type === 'goal' ? (Number(e.event_value) || 1) : (Number(e.event_value) || 0));
             });
 
         let topScorer = '-', maxGoals = 0;

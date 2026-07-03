@@ -144,7 +144,7 @@
                 if (!scorerMap[e.player_id]) {
                     scorerMap[e.player_id] = { goals: 0, assists: 0 };
                 }
-                scorerMap[e.player_id].goals += 1;
+                scorerMap[e.player_id].goals += (e.event_type === 'goal' ? (Number(e.event_value) || 1) : (Number(e.event_value) || 0));
                 });
 
                 // Assist — usa assist_first_name / assist_last_name dal model
