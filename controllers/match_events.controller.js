@@ -199,7 +199,7 @@ async function getMatchEventById(req, res) {
 */
 function scoreDeltaForEvent(event) {
   if (!event) return 0;
-  if (event.event_type === 'goal')  return Number(event.event_value || 1);
+  if (event.event_type === 'goal')  return Number(event.event_value ?? 1);
   if (event.event_type === 'bonus') return Number(event.event_value || 0);
   return 0;
 }
