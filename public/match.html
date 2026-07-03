@@ -221,6 +221,20 @@
       border: 1px solid #e2e8f0;
       white-space: nowrap;
     }
+
+    .mvp-banner {
+      margin: 10px auto 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #fef3c7, #fde68a);
+      color: #92400e;
+      border: 1px solid #f59e0b;
+      font-weight: 600;
+      font-size: .95rem;
+    }
   </style>
 </head>
 
@@ -501,12 +515,16 @@ function renderAddEventButton() {
                  (matchData.phase === 'first_half' ||
                   matchData.phase === 'second_half' ||
                   matchData.phase === 'extra_time');
-  if (!logged || !inPlay) return '';
+  const finished = matchData.status === 'finished';
+  if (!logged || (!inPlay && !finished)) return '';
+  const label = finished
+    ? (eventCreateMode ? 'Chiudi' : '👑 Assegna MVP')
+    : (eventCreateMode ? 'Chiudi evento' : 'Aggiungi evento');
   return `
     <div class="match-event-action">
       <button onclick="toggleEventCreate()">
         <i class="fa-solid ${eventCreateMode ? 'fa-xmark' : 'fa-plus'}"></i>
-        ${eventCreateMode ? 'Chiudi evento' : 'Aggiungi evento'}
+        ${label}
       </button>
     </div>`;
 }
@@ -521,25 +539,42 @@ function renderMatch(events) {
                   matchData.phase === 'second_half' ||
                   matchData.phase === 'extra_time');
   const inShootout = matchData.status === 'live' && matchData.phase === 'shootout';
+  const finished = matchData.status === 'finished';
 
   document.getElementById('match-page').innerHTML = `
     <div class="match-card match-detail-card">
       ${renderMatchHeader()}
       ${renderMatchTeams()}
       ${renderMatchStatus()}
+      ${renderMvpBanner()}
       ${renderReferee()}
     </div>
     ${logged && inShootout ? renderShootoutPanel() : ''}
     ${logged && inPlay && activeDadoKind() ? renderDadoButton() : ''}
     ${logged && inPlay && dadoKickMode && activeDadoKind() ? renderDadoPanel(activeDadoKind()) : ''}
     ${renderAddEventButton()}
-    ${inPlay && eventCreateMode ? renderAddEventBox() : ''}
+    ${(inPlay || finished) && eventCreateMode ? renderAddEventBox() : ''}
     ${logged && editEventId ? renderEditEventBox() : ''}
     <div id="events-list">${renderEvents(events)}</div>
   `;
 
   if (inPlay) startTimer();
+  if ((inPlay || finished) && eventCreateMode) handleEventTypeChange();
   if (logged && editEventId) initEditEventBox();
+}
+
+// Corona MVP mostrata sotto il tabellone della partita
+function renderMvpBanner() {
+  const mvp = (allEvents || []).find(e => e.event_type === 'mvp');
+  if (!mvp) return '';
+  const name = mvp.player_name || formatEventPlayerName(mvp) || 'Giocatore';
+  const num  = mvp.shirt_number ? `#${mvp.shirt_number} ` : '';
+  const team = mvp.team_name ? ` · ${formatTeamName(mvp.team_name)}` : '';
+  const clickable = mvp.player_id ? `onclick="goToPlayer(${mvp.player_id})" style="cursor:pointer;"` : '';
+  return `
+    <div class="mvp-banner" ${clickable} title="Miglior giocatore della partita">
+      👑 <strong>MVP</strong> — ${num}${name}${team}
+    </div>`;
 }
 
 // Tiri dello shootout FINALE di un lato: eventi goal_type='shootout' SENZA minuto
@@ -791,6 +826,19 @@ async function removeDadoKick(eventId) {
 }
 
 function renderAddEventBox() {
+  const finished = matchData.status === 'finished';
+  // A partita finita si può assegnare SOLO l'MVP (non gol/cartellini/ecc.).
+  const typeOptions = finished
+    ? '<option value="mvp">MVP 👑</option>'
+    : `
+            <option value="goal">Gol</option>
+            <option value="yellow_card">Cartellino Giallo</option>
+            <option value="red_card">Cartellino Rosso</option>
+            <option value="bonus">Bonus</option>
+            <option value="dado">Dado</option>
+            <option value="mvp">MVP 👑</option>
+            ${matchData.phase === 'second_half'
+              ? '<option value="special_card">Carta speciale</option>' : ''}`;
   return `
     <div class="admin-box">
       <h3><i class="fa-solid fa-plus"></i> Nuovo evento</h3>
@@ -800,13 +848,7 @@ function renderAddEventBox() {
         <div class="admin-field">
           <label>Tipo evento</label>
           <select id="event-type" onchange="handleEventTypeChange()">
-            <option value="goal">Gol</option>
-            <option value="yellow_card">Cartellino Giallo</option>
-            <option value="red_card">Cartellino Rosso</option>
-            <option value="bonus">Bonus</option>
-            <option value="dado">Dado</option>
-            ${matchData.phase === 'second_half'
-              ? '<option value="special_card">Carta speciale</option>' : ''}
+            ${typeOptions}
           </select>
         </div>
 
@@ -865,7 +907,7 @@ function renderAddEventBox() {
 
         <div class="admin-field hidden" id="bonus-box">
           <label>Bonus</label>
-          <select id="bonus-id">
+          <select id="bonus-id" onchange="applyBonusRule()">
             ${bonuses.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
           </select>
         </div>
@@ -1056,6 +1098,7 @@ function eventIcon(type) {
     case 'special_card': return '🃏';
     case 'dado':         return '🎲';
     case 'shootout_miss':return '✗';
+    case 'mvp':          return '👑';
     default:             return '•';
   }
 }
@@ -1095,6 +1138,7 @@ function eventLabel(e) {
     const suffix = e.bonus_outcome === 'missed' ? ' · sbagliato' : '';
     return `Bonus - ${e.bonus_name || ''}${suffix}`;
   }
+  if (e.event_type === 'mvp') return '👑 MVP';
   return e.event_type;
 }
 
@@ -1119,6 +1163,82 @@ function expelledPlayerIds() {
     }
   });
   return ids;
+}
+
+/* ── Regole speciali dei bonus (a chi si riferiscono nel form) ──────────────
+   I bonus "neutri" non incidono sul punteggio (garantito lato server):
+   qui gestiamo solo il giocatore/squadra di riferimento in fase di
+   inserimento e blocchiamo l'esito su "accaduto".
+     - Sospensione → giocatore dell'ALTRA squadra
+     - Star Player → giocatore della squadra chiamante
+     - Jolly       → solo accaduto, nessun giocatore → il presidente
+     - Goal Doppio → si riferisce alla squadra chiamante → il presidente
+*/
+function bonusRuleFor(bonusName) {
+  const n = String(bonusName || '').trim().toLowerCase();
+  const map = {
+    'sospensione': { playerFrom: 'opponent',  requirePlayer: true  },
+    'star player': { playerFrom: 'calling',   requirePlayer: true  },
+    'jolly':       { playerFrom: 'president',  requirePlayer: false },
+    'goal doppio': { playerFrom: 'president',  requirePlayer: false },
+    'gol doppio':  { playerFrom: 'president',  requirePlayer: false },
+  };
+  return map[n] || null;   // null = bonus normale (a punteggio)
+}
+
+function selectedBonusName() {
+  const sel = document.getElementById('bonus-id');
+  if (!sel || sel.selectedIndex < 0) return '';
+  const opt = sel.options[sel.selectedIndex];
+  return opt ? opt.textContent.trim() : '';
+}
+
+function presidentIdOf(teamId) {
+  const list = String(teamId) === String(matchData.home_team_id) ? homePlayers : awayPlayers;
+  const pre = (list || []).find(p => p.role === 'PRE');
+  return pre ? Number(pre.id) : null;
+}
+
+function fillEventPlayerSelect(list) {
+  const sel = document.getElementById('event-player');
+  if (!sel) return;
+  sel.innerHTML = (list || []).map(p =>
+    `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
+  ).join('');
+}
+
+function applyBonusRule() {
+  if (document.getElementById('event-type')?.value !== 'bonus') return;
+
+  const rule        = bonusRuleFor(selectedBonusName());
+  const outcomeSel  = document.getElementById('bonus-outcome');
+  const playerField = document.getElementById('event-player')?.closest('.admin-field');
+  const callingId   = document.getElementById('event-team')?.value;
+  const isHomeCall  = String(callingId) === String(matchData.home_team_id);
+
+  // Bonus normale: comportamento standard
+  if (!rule) {
+    if (outcomeSel) outcomeSel.disabled = false;
+    if (playerField) playerField.style.display = 'flex';
+    fillEventPlayerSelect(isHomeCall ? homePlayers : awayPlayers);
+    return;
+  }
+
+  // Bonus neutro: esito bloccato su "accaduto"
+  if (outcomeSel) { outcomeSel.value = 'happened'; outcomeSel.disabled = true; }
+
+  if (rule.playerFrom === 'president') {
+    // riferito alla squadra chiamante → il giocatore lo impostiamo noi (il presidente)
+    if (playerField) playerField.style.display = 'none';
+    return;
+  }
+
+  if (playerField) playerField.style.display = 'flex';
+  fillEventPlayerSelect(
+    rule.playerFrom === 'opponent'
+      ? (isHomeCall ? awayPlayers : homePlayers)
+      : (isHomeCall ? homePlayers : awayPlayers)
+  );
 }
 
 function renderPlayerSelects() {
@@ -1151,6 +1271,10 @@ function renderPlayerSelects() {
 
   // L'assist esclude i PRE e il marcatore selezionato
   refreshAssistOptions();
+
+  // Per i bonus con riferimento speciale (es. Sospensione = altra squadra)
+  // ricostruisco la lista giocatori corretta.
+  if (document.getElementById('event-type')?.value === 'bonus') applyBonusRule();
 
   const cardPlayer = document.getElementById('card-player');
   if (cardPlayer) {
@@ -1233,6 +1357,7 @@ function handleEventTypeChange() {
   if (type === 'bonus') {
     show('bonus-box', true);
     show('bonus-outcome-box', true);
+    applyBonusRule();
   }
   if (type === 'special_card') {
     show('card-box', true);
@@ -1419,7 +1544,8 @@ async function finishShootout() {
 async function createMatchEvent() {
   const event_type = document.getElementById('event-type').value;
   const team_id    = document.getElementById('event-team').value;
-  const minute     = getCurrentMinute();
+  // Se non c'è un cronometro attivo (es. MVP a partita finita) uso un minuto simbolico
+  const minute     = getCurrentMinute() || 90;
 
   const body = {
     match_id:  Number(matchId),
@@ -1464,6 +1590,18 @@ async function createMatchEvent() {
   if (event_type === 'bonus') {
     body.bonus_id      = Number(document.getElementById('bonus-id').value);
     body.bonus_outcome = document.getElementById('bonus-outcome').value;
+
+    const rule = bonusRuleFor(selectedBonusName());
+    if (rule) {
+      if (rule.playerFrom === 'president') {
+        // si riferisce alla squadra chiamante → uso il presidente (PRE)
+        body.player_id = presidentIdOf(team_id);
+      }
+      if (rule.requirePlayer && !body.player_id) {
+        alert('Per questo bonus devi selezionare un giocatore.');
+        return;
+      }
+    }
   }
 
   const res = await fetch('/match-events', {
@@ -1530,6 +1668,7 @@ function renderEditEventBox() {
             <option value="red_card"    ${sel(e.event_type,'red_card')}>Cartellino Rosso</option>
             <option value="bonus"       ${sel(e.event_type,'bonus')}>Bonus</option>
             <option value="dado"        ${sel(e.event_type,'dado')}>Dado</option>
+            <option value="mvp"         ${sel(e.event_type,'mvp')}>MVP 👑</option>
           </select>
         </div>
 
@@ -1574,7 +1713,7 @@ function renderEditEventBox() {
 
         <div class="admin-field" id="edit-bonus-box">
           <label>Bonus</label>
-          <select id="edit-bonus-id">
+          <select id="edit-bonus-id" onchange="applyEditBonusRule()">
             ${bonuses.map(b => `<option value="${b.id}" ${sel(b.id, e.bonus_id)}>${b.name}</option>`).join('')}
           </select>
         </div>
@@ -1610,6 +1749,55 @@ function renderEditEventBox() {
       </div>
     </div>
   `;
+}
+
+function selectedEditBonusName() {
+  const sel = document.getElementById('edit-bonus-id');
+  if (!sel || sel.selectedIndex < 0) return '';
+  const opt = sel.options[sel.selectedIndex];
+  return opt ? opt.textContent.trim() : '';
+}
+
+function fillEditPlayerSelect(list) {
+  const sel = document.getElementById('edit-event-player');
+  if (!sel) return;
+  const e = allEvents.find(ev => Number(ev.id) === Number(editEventId));
+  const want = e && e.player_id != null ? String(e.player_id) : '';
+  sel.innerHTML = (list || []).map(p =>
+    `<option value="${p.id}">#${p.shirt_number} ${p.first_name} ${p.last_name}</option>`
+  ).join('');
+  if (want && (list || []).some(p => String(p.id) === want)) sel.value = want;
+}
+
+function applyEditBonusRule() {
+  if (document.getElementById('edit-event-type')?.value !== 'bonus') return;
+
+  const rule        = bonusRuleFor(selectedEditBonusName());
+  const outcomeSel  = document.getElementById('edit-bonus-outcome');
+  const playerField = document.getElementById('edit-event-player')?.closest('.admin-field');
+  const callingId   = document.getElementById('edit-event-team')?.value;
+  const isHomeCall  = String(callingId) === String(matchData.home_team_id);
+
+  if (!rule) {
+    if (outcomeSel) outcomeSel.disabled = false;
+    if (playerField) playerField.style.display = 'flex';
+    fillEditPlayerSelect(isHomeCall ? homePlayers : awayPlayers);
+    return;
+  }
+
+  if (outcomeSel) { outcomeSel.value = 'happened'; outcomeSel.disabled = true; }
+
+  if (rule.playerFrom === 'president') {
+    if (playerField) playerField.style.display = 'none';
+    return;
+  }
+
+  if (playerField) playerField.style.display = 'flex';
+  fillEditPlayerSelect(
+    rule.playerFrom === 'opponent'
+      ? (isHomeCall ? awayPlayers : homePlayers)
+      : (isHomeCall ? homePlayers : awayPlayers)
+  );
 }
 
 function renderEditPlayerSelects() {
@@ -1693,6 +1881,7 @@ function handleEditTypeChange() {
   if (type === 'bonus') {
     document.getElementById('edit-bonus-box').style.display         = 'flex';
     document.getElementById('edit-bonus-outcome-box').style.display = 'flex';
+    applyEditBonusRule();
   }
   if (type === 'dado') {
     document.getElementById('edit-dado-box').style.display = 'flex';
@@ -1765,6 +1954,17 @@ async function submitEditEvent() {
   if (event_type === 'bonus') {
     body.bonus_id      = Number(document.getElementById('edit-bonus-id').value);
     body.bonus_outcome = document.getElementById('edit-bonus-outcome').value;
+
+    const rule = bonusRuleFor(selectedEditBonusName());
+    if (rule) {
+      if (rule.playerFrom === 'president') {
+        body.player_id = presidentIdOf(team_id);
+      }
+      if (rule.requirePlayer && !body.player_id) {
+        alert('Per questo bonus devi selezionare un giocatore.');
+        return;
+      }
+    }
   }
 
   const res = await fetch(`/match-events/${id}`, {

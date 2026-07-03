@@ -4,6 +4,19 @@ const Player = require('../models/players.model');
 const Match = require('../models/matches.model');
 
 /*
+  Bonus "neutri": informativi/di regolamento. NON incidono MAI sul punteggio
+  e NON contano come gol/assist del giocatore: vengono solo stampati in timeline.
+  (Sospensione, Jolly, Star Player, Gol/Goal Doppio.)
+*/
+const NEUTRAL_BONUSES = new Set([
+  'sospensione', 'jolly', 'star player', 'goal doppio', 'gol doppio'
+]);
+
+function isNeutralBonus(name) {
+  return NEUTRAL_BONUSES.has(String(name || '').trim().toLowerCase());
+}
+
+/*
   Normalizza un evento bonus in base all'esito scelto:
     bonus_outcome = 'scored' | 'missed' | 'happened'
     event_value   = gol del bonus se 'scored', altrimenti 0
@@ -18,6 +31,13 @@ async function applyBonusOutcome(data) {
 
   const bonus = await Bonus.getBonusById(data.bonus_id);
   if (!bonus) throw new Error('Bonus non trovato');
+
+  // Bonus neutro: sempre "accaduto", zero gol. Solo timeline.
+  if (isNeutralBonus(bonus.name)) {
+    data.bonus_outcome = 'happened';
+    data.event_value   = 0;
+    return;
+  }
 
   const outcome = data.bonus_outcome || data.outcome || 'scored';
   data.bonus_outcome = outcome;
@@ -139,6 +159,21 @@ async function createMatchEvent(req, res) {
       }
     }
 
+    // Regola: un solo MVP per partita; richiede un giocatore.
+    // L'MVP e' neutro: non incide sul punteggio ne conta come gol/assist.
+    if (data.event_type === 'mvp') {
+      if (!data.player_id) {
+        return res.status(400).json({ error: 'Seleziona il giocatore MVP.' });
+      }
+      const mvps = await MatchEvent.getMatchEvents({ match_id: data.match_id, event_type: 'mvp' });
+      if (mvps.length >= 1) {
+        return res.status(400).json({ error: 'MVP gia assegnato per questa partita.' });
+      }
+      data.event_value       = 0;
+      data.goal_type         = null;
+      data.assist_player_id  = null;
+    }
+
     await MatchEvent.createMatchEvent(data);
 
     // Punteggio: gol = +event_value (1, oppure 2 se "vale doppio");
@@ -213,6 +248,21 @@ async function updateMatchEvent(req, res) {
     const ruleError = await validateEventRules(req.body, req.params.id);
     if (ruleError) {
       return res.status(400).json({ error: ruleError });
+    }
+
+    // MVP: richiede un giocatore, resta unico per partita ed e' neutro sul punteggio
+    if (req.body.event_type === 'mvp') {
+      if (!req.body.player_id) {
+        return res.status(400).json({ error: 'Seleziona il giocatore MVP.' });
+      }
+      const mvps = await MatchEvent.getMatchEvents({ match_id: req.body.match_id, event_type: 'mvp' });
+      const otherMvp = mvps.some(m => String(m.id) !== String(req.params.id));
+      if (otherMvp) {
+        return res.status(400).json({ error: 'MVP gia assegnato per questa partita.' });
+      }
+      req.body.event_value      = 0;
+      req.body.goal_type        = null;
+      req.body.assist_player_id = null;
     }
 
     // 1) annullo l'effetto del vecchio evento sul punteggio

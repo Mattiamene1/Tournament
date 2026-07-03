@@ -101,7 +101,7 @@
 
       const goals = events.filter(e =>
         String(e.player_id) === String(playerId) &&
-        (e.event_type === 'goal' || e.event_type === 'bonus')
+        (e.event_type === 'goal' || (e.event_type === 'bonus' && Number(e.event_value) > 0))
       ).length;
 
       const assists = events.filter(e =>
