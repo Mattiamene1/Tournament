@@ -456,9 +456,10 @@ function markUpdated(){
 function buildStandings(matches){
   const table={};
   matches.forEach(match=>{
-    // Escludi le partite del tabellone (fasi finali): non hanno girone,
-    // altrimenti creerebbero una terza classifica "Girone".
-    if(!match.group_id) return;
+    // Classifica solo per i gironi 1 e 2. Qualsiasi altro group_id
+    // (o le partite del tabellone, senza girone) viene ignorato.
+    const gid = Number(match.group_id);
+    if(gid !== 1 && gid !== 2) return;
     const g = match.group_name || 'Girone';
     if(!table[g]) table[g]={};
     ensureTeam(table[g], match.home_team_id, match.home_team_name);
