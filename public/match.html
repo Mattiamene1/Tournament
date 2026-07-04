@@ -1562,9 +1562,10 @@ async function finishShootout() {
 async function createMatchEvent() {
   const event_type = document.getElementById('event-type').value;
   const team_id    = document.getElementById('event-team').value;
-  // L'MVP è un evento neutro senza minuto (come da inserimento manuale).
-  // Per gli altri eventi uso il cronometro (o un minuto simbolico se assente).
-  const minute     = event_type === 'mvp' ? null : (getCurrentMinute() || 90);
+  // A fine partita non c'è cronometro attivo. L'MVP non mostra il minuto
+  // (è filtrato dalla timeline), quindi usiamo un minuto simbolico valido:
+  // così l'inserimento funziona sempre, anche con il vecchio backend.
+  const minute     = getCurrentMinute() || 90;
 
   const body = {
     match_id:  Number(matchId),
